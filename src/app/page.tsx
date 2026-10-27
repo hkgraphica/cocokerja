@@ -1,89 +1,236 @@
-const BOT_URL = process.env.NEXT_PUBLIC_BOT_URL ?? "https://t.me/";
-
-const steps = [
-  { n: "01", t: "Kirim CV", d: "Upload PDF ke bot Telegram. Data terenkripsi dan bisa kamu hapus kapan saja." },
-  { n: "02", t: "Atur preferensi", d: "Peran, kota atau remote, dan level. Tidak sampai satu menit." },
-  { n: "03", t: "Terima alert cerdas", d: "Hanya lowongan yang relevan, lengkap dengan skor dan alasannya." },
-  { n: "04", t: "Siap melamar", d: "Lihat skill gap, simpan ke tracker, dan beri umpan balik agar makin akurat." },
-];
-
-const features = [
-  { i: "🎯", t: "Skor kecocokan yang jujur", d: "Bukan sekadar keyword. Setiap skor punya alasan cocok dan kekurangannya." },
-  { i: "🛡️", t: "Penyaring lowongan palsu", d: "Indikasi MLM atau minta biaya pendaftaran ditandai sebelum kamu melamar." },
-  { i: "🔒", t: "Privasi dulu", d: "CV terenkripsi, persetujuan eksplisit, dan hapus semua data dengan satu perintah." },
-  { i: "💬", t: "Tanpa aplikasi baru", d: "Semua berjalan di Telegram. Tidak perlu mendaftar akun atau mengingat kata sandi." },
-];
+const BOT_URL = process.env.NEXT_PUBLIC_BOT_URL ?? "https://t.me/cocokerja_bot";
 
 export default function Home() {
   return (
-    <main>
-      <div className="glow" aria-hidden />
-      <header className="nav">
-        <span className="logo">Coco<b>Kerja</b></span>
-        <a className="btn btn-ghost" href={BOT_URL} id="nav-cta">Buka bot</a>
-      </header>
+    <>
+      <div className="bg-grid" aria-hidden="true" />
+      <div className="container">
+        {/* Navigation */}
+        <header className="header">
+          <a href="#" className="brand">
+            <span className="brand-badge">CK</span>
+            <span>CocoKerja</span>
+          </a>
+          <nav className="nav-actions">
+            <a href="#cara-kerja" className="link-muted">Cara Kerja</a>
+            <a href="#fitur" className="link-muted">Fitur</a>
+            <a
+              href={BOT_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary"
+              id="nav-bot-link"
+            >
+              Buka di Telegram
+            </a>
+          </nav>
+        </header>
 
-      <section className="hero">
-        <span className="pill">Uji coba terbuka • Gratis</span>
-        <h1>
-          Lowongan yang <em>benar-benar cocok</em>, langsung ke Telegram kamu.
-        </h1>
-        <p className="lead">
-          CocoKerja memantau lowongan, menilai kecocokannya dengan profilmu, lalu membantu kamu siap melamar.
-          Dibuat untuk fresh graduate Indonesia.
-        </p>
-        <div className="cta">
-          <a className="btn btn-primary" href={BOT_URL} id="hero-cta">Mulai di Telegram →</a>
-          <span className="note">Tanpa kartu kredit • 3 alert gratis per minggu</span>
-        </div>
-
-        <div className="card-demo" aria-label="Contoh alert lowongan">
-          <div className="demo-top">
-            <strong>Junior Data Analyst</strong>
-            <span className="score">87%</span>
+        {/* Hero Section */}
+        <section className="hero">
+          <div className="status-badge">
+            <span className="status-dot" />
+            <span>MVP Pilot Aktif • Khusus Fresh Graduate</span>
           </div>
-          <p className="muted">PT Contoh Data • Jakarta</p>
-          <ul>
-            <li className="ok">Skill cocok: sql, excel, power bi</li>
-            <li className="ok">Terbuka untuk fresh graduate</li>
-            <li className="warn">Skill kurang: tableau</li>
-          </ul>
-          <div className="demo-actions"><span>📊 Skill gap</span><span>💾 Simpan</span><span>👍 Cocok</span></div>
-        </div>
-      </section>
 
-      <section className="section" aria-labelledby="how">
-        <h2 id="how">Cara kerjanya</h2>
-        <div className="grid4">
-          {steps.map((s) => (
-            <article className="tile" key={s.n}>
-              <span className="num">{s.n}</span>
-              <h3>{s.t}</h3>
-              <p>{s.d}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+          <h1>
+            Job alert terkurasi langsung ke chat. Bukan sekadar keyword match.
+          </h1>
 
-      <section className="section" aria-labelledby="why">
-        <h2 id="why">Kenapa CocoKerja</h2>
-        <div className="grid2">
-          {features.map((f) => (
-            <article className="tile" key={f.t}>
-              <span className="icon">{f.i}</span>
-              <h3>{f.t}</h3>
-              <p>{f.d}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+          <p className="lead">
+            Kirimkan CV kamu satu kali. CocoKerja mengekstrak skill dan pengalaman secara terstruktur,
+            lalu memantau lowongan kerja riil dan memberikan evaluasi kecocokan objektif beserta analisis kekurangannya.
+          </p>
 
-      <section className="final">
-        <h2>Siap berhenti scroll grup loker?</h2>
-        <a className="btn btn-primary" href={BOT_URL} id="final-cta">Mulai sekarang →</a>
-      </section>
+          <div className="hero-cta">
+            <a
+              href={BOT_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-accent"
+              id="hero-start-btn"
+            >
+              Mulai via @cocokerja_bot →
+            </a>
+            <span className="hero-meta">Gratis 3 alert/minggu • Enkripsi CV tersimpan</span>
+          </div>
+        </section>
 
-      <footer className="foot">© 2026 CocoKerja • Versi uji coba. Kami tidak menjamin mendapat pekerjaan.</footer>
-    </main>
+        {/* Split Preview: Real product representation */}
+        <section className="preview-section" id="demo">
+          <div>
+            <div className="section-label">Transparansi Data</div>
+            <h2 style={{ fontSize: "1.75rem", fontWeight: 600, marginBottom: "16px", letterSpacing: "-0.02em" }}>
+              Tahu persis alasan lowongan cocok sebelum kamu melamar.
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "24px" }}>
+              Portal kerja konvensional membombardir inbox kamu dengan ratusan lowongan yang meleset.
+              Di CocoKerja, setiap alert yang dikirim disertai perincian data: skill mana yang kamu miliki,
+              skill apa yang masih kurang, dan apakah level pengalamannya realistis untuk fresh graduate.
+            </p>
+            <div style={{ display: "grid", gap: "12px", borderLeft: "2px solid var(--border)", paddingLeft: "16px" }}>
+              <div>
+                <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>Deteksi Indikasi Penipuan</strong>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-tertiary)" }}>
+                  Otomatis menandai postingan yang meminta biaya pendaftaran atau modus MLM.
+                </p>
+              </div>
+              <div>
+                <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>Hak Kendali Data Pribadi</strong>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-tertiary)" }}>
+                  Sesuai regulasi UU PDP. Ketik /hapus kapan saja untuk memusnahkan CV dan riwayat profilmu.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Telegram Alert Message Card UI */}
+          <div className="mock-telegram">
+            <div className="mock-header">
+              <div className="mock-sender">
+                <div className="mock-avatar">CK</div>
+                <div>
+                  <div className="mock-title">CocoKerja Bot</div>
+                  <div className="mock-tag">bot • verified alert</div>
+                </div>
+              </div>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}>
+                Hari ini 09:41
+              </span>
+            </div>
+
+            <div className="mock-content">
+              <div>
+                <div className="job-title">Junior Data Analyst</div>
+                <div className="job-company">PT Telekomunikasi Nusantara • Jakarta Selatan (Hybrid)</div>
+              </div>
+
+              <div className="match-bar-container">
+                <div className="match-header">
+                  <span className="match-label">Skor Kesesuaian Profil</span>
+                  <span className="match-value">84% Cocok</span>
+                </div>
+                <div className="match-bar">
+                  <div className="match-bar-fill" style={{ width: "84%" }} />
+                </div>
+              </div>
+
+              <div className="reason-list">
+                <div className="reason-item match">
+                  <span className="icon-ok">✓</span>
+                  <span>Skill cocok: SQL, Excel, Python dasar, data cleaning</span>
+                </div>
+                <div className="reason-item match">
+                  <span className="icon-ok">✓</span>
+                  <span>Kriteria pengalaman terbuka untuk Fresh Graduate / S1</span>
+                </div>
+                <div className="reason-item gap">
+                  <span className="icon-warn">!</span>
+                  <span>Skill kurang: Tableau / Power BI dashboarding</span>
+                </div>
+              </div>
+
+              <div className="mock-actions">
+                <a href={BOT_URL} className="mock-btn mock-btn-main">
+                  🔗 Buka Link Lamaran Resmi
+                </a>
+                <span className="mock-btn">📊 Analisis Skill Gap</span>
+                <span className="mock-btn">💾 Simpan ke Tracker</span>
+                <span className="mock-btn">👍 Cocok</span>
+                <span className="mock-btn">👎 Tidak Relevan</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Workflow / Cara Kerja */}
+        <section className="features-section" id="cara-kerja">
+          <div className="section-label">Alur Penggunaan</div>
+          <h2 className="section-title">Sederhana. Tanpa perlu download aplikasi baru.</h2>
+
+          <div className="feature-grid">
+            <div className="feature-card">
+              <div className="feature-num">01 / SETUP</div>
+              <h3 className="feature-title">Kirimkan CV Kamu</h3>
+              <p className="feature-desc">
+                Cukup drop file PDF atau paste teks CV ke Telegram. Profil diekstrak otomatis dan disimpan terenkripsi AES-256.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-num">02 / PREFERENSI</div>
+              <h3 className="feature-title">Pilih Parameter Kerja</h3>
+              <p className="feature-desc">
+                Tentukan bidang spesifik, preferensi kota, apakah bersedia remote, dan batasan level (magang / fresh graduate).
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-num">03 / MONITOR</div>
+              <h3 className="feature-title">Terima Notifikasi Relevan</h3>
+              <p className="feature-desc">
+                Pipeline sistem melakukan seleksi berkala dan hanya mengirimkan lowongan yang lolos ambang batas skor yang kamu tentukan.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Value Prop Details */}
+        <section className="features-section" id="fitur">
+          <div className="section-label">Spesifikasi Sistem</div>
+          <h2 className="section-title">Dirancang untuk efisiensi pencari kerja</h2>
+
+          <div className="feature-grid">
+            <div className="feature-card">
+              <h3 className="feature-title">Chat-First Native</h3>
+              <p className="feature-desc">
+                Kelola status pencarian, cek sisa kuota, dan atur threshold skor kecocokan langsung lewat perintah chat Telegram.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <h3 className="feature-title">Audit Logik Objektif</h3>
+              <p className="feature-desc">
+                Skoring berbasis bobot nyata: korelasi role (30%), kesesuaian skill teknis (35%), level (15%), dan lokasi (10%).
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <h3 className="feature-title">Feedback Loop Akurasi</h3>
+              <p className="feature-desc">
+                Tiap notifikasi memiliki tombol umpan balik. Tanggapan kamu digunakan sistem untuk memperbaiki akurasi matching berikutnya.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Panel */}
+        <section className="cta-panel">
+          <h2>Mulai pantau lowongan yang tepat hari ini</h2>
+          <p>
+            Bergabunglah dalam uji coba bot CocoKerja. Tidak memerlukan biaya pendaftaran atau akun baru.
+          </p>
+          <a
+            href={BOT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-accent"
+          >
+            Mulai Percakapan di Telegram
+          </a>
+        </section>
+
+        {/* Footer */}
+        <footer className="footer">
+          <div>
+            © 2026 CocoKerja. Asisten karier cerdas untuk fresh graduate Indonesia.
+          </div>
+          <div style={{ display: "flex", gap: "16px" }}>
+            <a href={BOT_URL} target="_blank" rel="noreferrer">Telegram Bot</a>
+            <a href="https://github.com/hkgraphica/cocokerja" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 }
