@@ -1,8 +1,8 @@
 import type { Tier } from "./types";
 
-export const PLANS: Record<Tier, { alertsPerWeek: number; llmPerWeek: number }> = {
-  free: { alertsPerWeek: 3, llmPerWeek: 10 },
-  premium: { alertsPerWeek: 30, llmPerWeek: 200 },
+export const PLANS: Record<Tier, { alertsPerWeek: number; llmPerWeek: number; chatPerWeek: number }> = {
+  free: { alertsPerWeek: 3, llmPerWeek: 10, chatPerWeek: 5 },
+  premium: { alertsPerWeek: 30, llmPerWeek: 200, chatPerWeek: 100 },
 };
 
 /** Kunci minggu ISO, mis. "2026-W44". */

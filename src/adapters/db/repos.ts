@@ -153,18 +153,19 @@ export const repos = {
 
   async getUsage(userId: string, week = isoWeek()) {
     const [u] = await db().select().from(usage).where(and(eq(usage.userId, userId), eq(usage.week, week)));
-    return u ?? { userId, week, alertsUsed: 0, llmCallsUsed: 0 };
+    return u ?? { userId, week, alertsUsed: 0, llmCallsUsed: 0, chatCallsUsed: 0 };
   },
 
-  async addUsage(userId: string, delta: { alerts?: number; llm?: number }, week = isoWeek()) {
+  async addUsage(userId: string, delta: { alerts?: number; llm?: number; chat?: number }, week = isoWeek()) {
     await db()
       .insert(usage)
-      .values({ userId, week, alertsUsed: delta.alerts ?? 0, llmCallsUsed: delta.llm ?? 0 })
+      .values({ userId, week, alertsUsed: delta.alerts ?? 0, llmCallsUsed: delta.llm ?? 0, chatCallsUsed: delta.chat ?? 0 })
       .onConflictDoUpdate({
         target: [usage.userId, usage.week],
         set: {
           alertsUsed: sql`${usage.alertsUsed} + ${delta.alerts ?? 0}`,
           llmCallsUsed: sql`${usage.llmCallsUsed} + ${delta.llm ?? 0}`,
+          chatCallsUsed: sql`${usage.chatCallsUsed} + ${delta.chat ?? 0}`,
         },
       });
   },

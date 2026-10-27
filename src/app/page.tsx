@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const BOT_URL = process.env.NEXT_PUBLIC_BOT_URL ?? "https://t.me/cocokerja_bot";
 
 export default function Home() {
@@ -56,12 +58,14 @@ export default function Home() {
           </div>
 
           <div className="hero-showcase" aria-label="Karier Sukses Bersama CocoKerja">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/hero-human.jpg"
               alt="Fresh graduate Indonesia yang percaya diri mempersiapkan karir bersama asisten AI CocoKerja"
               className="hero-img"
-              loading="eager"
+              width={1376}
+              height={768}
+              sizes="(max-width: 1040px) 100vw, 1040px"
+              priority
             />
             <div className="hero-overlay-tag">
               <div className="tag-icon">CK</div>

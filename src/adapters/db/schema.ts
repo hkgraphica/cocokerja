@@ -92,6 +92,7 @@ export const usage = pgTable(
     week: text("week").notNull(),
     alertsUsed: integer("alerts_used").notNull().default(0),
     llmCallsUsed: integer("llm_calls_used").notNull().default(0),
+    chatCallsUsed: integer("chat_calls_used").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.userId, t.week] })],
 );

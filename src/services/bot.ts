@@ -69,10 +69,10 @@ async function handleMessage(m: Message, tg: Messenger) {
 
       const plan = PLANS[user.tier as "free" | "premium"];
       const currentUsage = await repos.getUsage(user.id);
-      if (currentUsage.llmCallsUsed >= plan.llmPerWeek) {
+      if (currentUsage.chatCallsUsed >= plan.chatPerWeek) {
         return tg.send(
           chatId,
-          `⚠️ Kuota konsultasi AI minggu ini sudah mencapai batas (${plan.llmPerWeek} panggilan). Kuota akan direset setiap hari Senin.`,
+          `⚠️ Kuota konsultasi AI minggu ini sudah habis (${plan.chatPerWeek} chat). Kuota direset setiap hari Senin.`,
         );
       }
 
@@ -87,7 +87,7 @@ async function handleMessage(m: Message, tg: Messenger) {
 
         const answer = await llm.chatCareerAdvice(profileData, text);
         if (answer) {
-          await repos.addUsage(user.id, { llm: 1 });
+          await repos.addUsage(user.id, { chat: 1 });
           await repos.track("chat_copilot", user.id, { textLength: text.length });
           return tg.send(chatId, answer);
         }
