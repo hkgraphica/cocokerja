@@ -165,34 +165,54 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Workflow / Cara Kerja */}
+        {/* Workflow / Cara Kerja 4 Tahap Lengkap */}
         <section className="features-section" id="cara-kerja">
-          <div className="section-label">Alur Penggunaan</div>
-          <h2 className="section-title">Fleksibel: Pasif terima notifikasi atau aktif cek lowonganmu sendiri.</h2>
+          <div className="section-label">Arsitektur & Alur Kerja</div>
+          <h2 className="section-title">Bagaimana CocoKerja bekerja untukmu: 4 Tahapan Presisi</h2>
 
           <div className="feature-grid">
             <div className="feature-card">
-              <div className="feature-num">01 / SETUP</div>
-              <h3 className="feature-title">Kirimkan CV Kamu</h3>
+              <div className="feature-num">TAHAP 01 / ONBOARDING AMAN</div>
+              <h3 className="feature-title">Setup & Enkripsi CV (UU PDP)</h3>
               <p className="feature-desc">
-                Cukup drop file PDF atau paste teks CV ke Telegram. Profil diekstrak otomatis dan disimpan terenkripsi AES-256.
+                Cukup drop file PDF atau ketik CV ke Telegram. Skill & pendidikan diekstrak terstruktur, sedangkan teks CV mentah dienkripsi simetris dengan <b>AES-256</b>. Tidak ada data yang diperjualbelikan.
               </p>
+              <div style={{ marginTop: "12px", fontSize: "0.8rem", color: "var(--accent-light)", fontFamily: "var(--font-mono)" }}>
+                • Ekstraksi otomatis • Enkripsi AES-256
+              </div>
             </div>
 
             <div className="feature-card">
-              <div className="feature-num">02 / ON-DEMAND</div>
-              <h3 className="feature-title">Cek Loker Instan</h3>
+              <div className="feature-num">TAHAP 02 / PASOKAN LEGAL</div>
+              <h3 className="feature-title">Filter Anti-Scam & Link Aktif</h3>
               <p className="feature-desc">
-                Temukan loker di LinkedIn, Glints, atau Jobstreet? Paste link atau deskripsinya ke bot untuk evaluasi kecocokan dalam 5 detik.
+                Lowongan dihimpun dari portal ATS resmi perusahaan (Greenhouse, Lever, Ashby) dan komunitas terverifikasi. Dilengkapi deteksi otomatis modus penipuan/deposit dan pengecekan link 404 sebelum dikirim.
               </p>
+              <div style={{ marginTop: "12px", fontSize: "0.8rem", color: "var(--success)", fontFamily: "var(--font-mono)" }}>
+                • Anti-Scam Flagging • Zero Broken Links
+              </div>
             </div>
 
             <div className="feature-card">
-              <div className="feature-num">03 / TAILOR CV</div>
-              <h3 className="feature-title">Sesuaikan CV Tanpa Halusinasi</h3>
+              <div className="feature-num">TAHAP 03 / MATCHING ENGINE</div>
+              <h3 className="feature-title">Skoring Objektif & Skill Gap</h3>
               <p className="feature-desc">
-                Satu klik untuk membuat ringkasan & poin CV yang cocok dengan kualifikasi lowongan—dijamin 100% berbasis fakta asli CV-mu.
+                Bukan black-box AI! Kecocokan dihitung dengan 5 bobot terukur: Peran (30%), Skill Teknis (35%), Level Fresh Grad (15%), Lokasi (10%), dan Gaji (10%). Disertai detail skill yang harus dipelajari.
               </p>
+              <div style={{ marginTop: "12px", fontSize: "0.8rem", color: "var(--warning)", fontFamily: "var(--font-mono)" }}>
+                • Heuristic 5-Factors • Detail Skill Gap
+              </div>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-num">TAHAP 04 / ON-DEMAND TOOLS</div>
+              <h3 className="feature-title">Cek Instan & Tailor Anti-Bohong</h3>
+              <p className="feature-desc">
+                Temukan loker di LinkedIn/Glints? Cukup paste link/teks ke bot untuk analisis instan. Klik "Sesuaikan CV" untuk membuat draft CV relevan yang dijamin 100% berbasis fakta asli tanpa halusinasi AI.
+              </p>
+              <div style={{ marginTop: "12px", fontSize: "0.8rem", color: "var(--accent-light)", fontFamily: "var(--font-mono)" }}>
+                • On-Demand Inspection • Evidence-Verified
+              </div>
             </div>
           </div>
         </section>
@@ -200,27 +220,27 @@ export default function Home() {
         {/* Value Prop Details */}
         <section className="features-section" id="fitur">
           <div className="section-label">Spesifikasi Sistem</div>
-          <h2 className="section-title">Dirancang untuk efisiensi pencari kerja</h2>
+          <h2 className="section-title">Teknologi yang dibangun untuk melindungi pencari kerja</h2>
 
           <div className="feature-grid">
             <div className="feature-card">
-              <h3 className="feature-title">Chat-First Native</h3>
+              <h3 className="feature-title">Anti-Hallucination Guardrails</h3>
               <p className="feature-desc">
-                Kelola status pencarian, cek sisa kuota, dan atur threshold skor kecocokan langsung lewat perintah chat Telegram.
+                Banyak AI mengarang pengalaman palsu yang membuat pelamar gagal interview. Sistem kami memverifikasi bukti kutipan riil dari CV sebelum draft diserahkan ke pengguna.
               </p>
             </div>
 
             <div className="feature-card">
-              <h3 className="feature-title">Audit Logik Objektif</h3>
+              <h3 className="feature-title">AI Career Copilot 24/7</h3>
               <p className="feature-desc">
-                Skoring berbasis bobot nyata: korelasi role (30%), kesesuaian skill teknis (35%), level (15%), dan lokasi (10%).
+                Konsultasikan persiapan interview teknis, review profil, hingga negosiasi gaji entry-level langsung via chat interaktif di Telegram kapan saja.
               </p>
             </div>
 
             <div className="feature-card">
-              <h3 className="feature-title">Feedback Loop Akurasi</h3>
+              <h3 className="feature-title">Signal over Volume</h3>
               <p className="feature-desc">
-                Tiap notifikasi memiliki tombol umpan balik. Tanggapan kamu digunakan sistem untuk memperbaiki akurasi matching berikutnya.
+                Kami tidak membombardirmu dengan 100 loker sampah. Kamu hanya menerima sedikit lowongan yang benar-benar bernilai tinggi dan relevan dengan kompetensimu.
               </p>
             </div>
           </div>
