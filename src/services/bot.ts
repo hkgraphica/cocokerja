@@ -29,7 +29,136 @@ export const feedbackButtons = (matchId: string, url: string) => [
 export async function handleUpdate(update: TgUpdate, messenger: Messenger): Promise<void> {
   if (!(await repos.markUpdate(update.update_id))) return; // retry Telegram
   if (update.callback_query) return handleCallback(update.callback_query, messenger);
+  if (update.channel_post) return handleChannelPost(update.channel_post);
   if (update.message) return handleMessage(update.message, messenger);
+}
+
+/** Opsi 4: Otomatis panen lowongan dari Telegram Channel/Group Komunitas Loker */
+async function handleChannelPost(post: NonNullable<TgUpdate["channel_post"]>) {
+  const text = post.text?.trim() ?? "";
+  if (text.length < 50) return;
+
+  const firstLine = text.split("\n")[0].slice(0, 100);
+  const title = (firstLine.match(/^(?:lowongan(?:\s+kerja)?|loker|we(?:'re|\s+are)\s+hiring|dicari|posisi)\s*[:\-–]?\s*(.+)/i)?.[1] || firstLine)
+    .replace(/[#*]/g, "").trim();
+  const companyMatch = text.match(/(?:di|pt|cv|startup|perusahaan|at)\s+([a-zA-Z0-9\s.,]+)/i);
+  const company = companyMatch ? companyMatch[1].split("\n")[0].slice(0, 80).trim() : (post.chat.title || "Telegram Channel");
+  const locMatch = text.match(/(?:lokasi|penempatan|domisili)\s*[:\-–]?\s*([a-zA-Z0-9\s.,]+)/i);
+  const location = locMatch ? locMatch[1].split("\n")[0].slice(0, 80).trim() : (/\bremote\b/i.test(text) ? "Remote" : "Indonesia");
+  const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+  const url = urlMatch ? urlMatch[0] : (post.chat.username ? `https://t.me/${post.chat.username}/${post.message_id}` : `https://t.me/c/${Math.abs(post.chat.id)}/${post.message_id}`);
+
+  const { jobHash, looksSuspicious } = await import("@/core/jobs");
+  await repos.insertJob({
+    source: `telegram:@${post.chat.username || post.chat.title || "community"}`,
+    externalId: `tg-${post.chat.id}-${post.message_id}`,
+    title: title || "Lowongan Komunitas",
+    company: company || "Perusahaan",
+    location: location || "Indonesia",
+    description: text.slice(0, 8000),
+    url,
+    suspicious: looksSuspicious(text),
+    hash: jobHash(title, company, location),
+  });
+}
+
+/** Cek apakah teks pesan pengguna adalah link lowongan atau posting deskripsi pekerjaan */
+function looksLikeJobInput(text: string): boolean {
+  if (/https?:\/\/(?:www\.)?(?:linkedin\.com\/jobs|jobstreet\.|glints\.com|kalibrr\.com|kitalulus\.com|dealls\.com|indeed\.com)[^\s]+/i.test(text)) {
+    return true;
+  }
+  const isJobKeyword = /\b(we are hiring|lowongan|kualifikasi|persyaratan|requirements|job description|responsibilities|tanggung jawab|kriteria|salary|gaji|fresh graduate welcome)\b/i.test(text);
+  return isJobKeyword && text.length > 80;
+}
+
+async function handleOnDemandJobCheck(text: string, user: { id: string; tier: string; threshold: number }, chatId: string, tg: Messenger) {
+  const p = await repos.getProfile(user.id);
+  if (!p) return tg.send(chatId, "Profilmu belum lengkap. Ketik /start untuk mengunggah CV terlebih dahulu.");
+
+  const { heuristicScore } = await import("@/core/scoring");
+  const { jobHash, looksSuspicious, stripHtml } = await import("@/core/jobs");
+
+  await tg.send(chatId, "🔍 <i>Sedang menganalisis kecocokan lowongan dengan profil & CV-mu...</i>");
+
+  let title = "Lowongan Pilihan";
+  let company = "Perusahaan";
+  let location = "Indonesia";
+  let description = text;
+  let url = "https://t.me/cocokerja_bot";
+
+  const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch) {
+    url = urlMatch[0];
+    try {
+      const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }, signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const html = await res.text();
+        const docTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1];
+        if (docTitle) title = stripHtml(docTitle).slice(0, 100);
+        description = stripHtml(html).slice(0, 5000) || text;
+      }
+    } catch {
+      // Abaikan jika web memblokir bot, pakai teks asli
+    }
+  }
+
+  if (title === "Lowongan Pilihan") {
+    const lines = text.split("\n").filter((l) => l.trim().length > 0);
+    title = lines[0].slice(0, 100).replace(/[*#]/g, "").trim();
+  }
+
+  const { job } = await repos.upsertJob({
+    source: "user_ondemand",
+    title,
+    company,
+    location,
+    description: description.slice(0, 8000),
+    url,
+    suspicious: looksSuspicious(text + " " + description),
+    hash: jobHash(title, company, location + url),
+  });
+
+  const profileData = {
+    skills: p.skills,
+    education: p.education,
+    preferences: p.preferences as import("@/core/types").Preferences,
+  };
+
+  let scoreRes = heuristicScore(profileData, job);
+
+  // Jika LLM aktif, gunakan untuk presisi
+  if (env().LLM_API_KEY) {
+    try {
+      const { OpenAiCompatScorer } = await import("@/adapters/llm");
+      const llm = new OpenAiCompatScorer();
+      const refined = await llm.score(profileData, job);
+      if (refined) {
+        scoreRes = { ...refined, components: scoreRes.components };
+      }
+    } catch {
+      // fallback ke heuristik
+    }
+  }
+
+  const matchRecord = {
+    userId: user.id,
+    jobId: job.id,
+    score: scoreRes.score,
+    scoreComponents: scoreRes.components,
+    reasons: scoreRes.reasons,
+    gaps: scoreRes.gaps,
+    scoredBy: env().LLM_API_KEY ? "llm" : "heuristic",
+    sentAt: new Date(),
+  };
+
+  await repos.insertMatch(matchRecord);
+  const match = await repos.getMatch(matchRecord.jobId, user.id);
+  const matchId = match ? match.match.id : job.id;
+
+  await repos.track("ondemand_job_checked", user.id, { score: scoreRes.score });
+
+  const card = jobCard(job, scoreRes, job.suspicious);
+  return tg.send(chatId, `🎯 <b>Hasil Analisis Lowongan Instan:</b>\n\n${card}`, feedbackButtons(matchId, job.url));
 }
 
 async function handleMessage(m: Message, tg: Messenger) {
@@ -63,6 +192,10 @@ async function handleMessage(m: Message, tg: Messenger) {
     case "level":
       return askLevel(chatId, tg);
     default: {
+      if (looksLikeJobInput(text)) {
+        return handleOnDemandJobCheck(text, user, chatId, tg);
+      }
+
       // User aktif yang mengirim pesan chat bebas -> Masuk ke AI Career Copilot Chat
       const p = await repos.getProfile(user.id);
       if (!p) {

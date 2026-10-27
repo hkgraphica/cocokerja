@@ -23,7 +23,10 @@ Setuju melanjutkan?`,
 /status - kuota dan pengaturan
 /profil - ringkasan profil
 /ambang 70 - skor minimum alert (30-95)
-/hapus - hapus semua datamu`,
+/hapus - hapus semua datamu
+
+💡 <b>Fitur Cek Lowongan Instan:</b>
+Kirimkan link lowongan (LinkedIn/Glints/Jobstreet/dll) atau paste teks lowongan ke sini. CocoKerja akan langsung menilai kecocokannya dengan CV-mu dan membuatkan draft penyesuaian CV!`,
   deleteConfirm: "Ini akan menghapus CV, profil, dan riwayat. Ketik <code>/hapus ya</code> untuk konfirmasi.",
   deleted: "🗑️ Semua datamu sudah dihapus. Ketik /start jika ingin memulai lagi.",
   needConsent: "Tekan tombol <b>Setuju</b> di atas untuk melanjutkan, atau /start untuk mengulang.",

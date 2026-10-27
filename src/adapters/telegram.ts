@@ -5,9 +5,14 @@ export interface TgUpdate {
   update_id: number;
   message?: {
     message_id: number;
-    chat: { id: number };
+    chat: { id: number; type?: string; title?: string };
     text?: string;
     document?: { file_id: string; file_size?: number; mime_type?: string };
+  };
+  channel_post?: {
+    message_id: number;
+    chat: { id: number; type?: string; title?: string; username?: string };
+    text?: string;
   };
   callback_query?: { id: string; data?: string; message?: { chat: { id: number } } };
 }

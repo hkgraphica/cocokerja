@@ -85,6 +85,14 @@ export const repos = {
     return r.length > 0;
   },
 
+  /** Simpan atau dapatkan lowongan berdasarkan hash, kembalikan data recordnya */
+  async upsertJob(j: typeof jobs.$inferInsert) {
+    const existing = await db().select().from(jobs).where(eq(jobs.hash, j.hash)).limit(1);
+    if (existing[0]) return { job: existing[0], isNew: false };
+    const inserted = await db().insert(jobs).values(j).returning();
+    return { job: inserted[0], isNew: true };
+  },
+
   async expireOldJobs(days = 45) {
     const cutoff = new Date(Date.now() - days * 86400000);
     await db().update(jobs).set({ status: "expired" }).where(and(eq(jobs.status, "active"), lt(jobs.fetchedAt, cutoff)));
