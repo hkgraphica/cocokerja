@@ -157,6 +157,7 @@ export default function Home() {
                 </a>
                 <span className="mock-btn">📊 Analisis Skill Gap</span>
                 <span className="mock-btn">💾 Simpan ke Tracker</span>
+                <span className="mock-btn" style={{ borderColor: "var(--accent-glow)", color: "var(--accent)" }}>✍️ Sesuaikan CV (Anti-Halusinasi)</span>
                 <span className="mock-btn">👍 Cocok</span>
                 <span className="mock-btn">👎 Tidak Relevan</span>
               </div>
@@ -167,7 +168,7 @@ export default function Home() {
         {/* Workflow / Cara Kerja */}
         <section className="features-section" id="cara-kerja">
           <div className="section-label">Alur Penggunaan</div>
-          <h2 className="section-title">Sederhana. Tanpa perlu download aplikasi baru.</h2>
+          <h2 className="section-title">Fleksibel: Pasif terima notifikasi atau aktif cek lowonganmu sendiri.</h2>
 
           <div className="feature-grid">
             <div className="feature-card">
@@ -179,18 +180,18 @@ export default function Home() {
             </div>
 
             <div className="feature-card">
-              <div className="feature-num">02 / PREFERENSI</div>
-              <h3 className="feature-title">Pilih Parameter Kerja</h3>
+              <div className="feature-num">02 / ON-DEMAND</div>
+              <h3 className="feature-title">Cek Loker Instan</h3>
               <p className="feature-desc">
-                Tentukan bidang spesifik, preferensi kota, apakah bersedia remote, dan batasan level (magang / fresh graduate).
+                Temukan loker di LinkedIn, Glints, atau Jobstreet? Paste link atau deskripsinya ke bot untuk evaluasi kecocokan dalam 5 detik.
               </p>
             </div>
 
             <div className="feature-card">
-              <div className="feature-num">03 / MONITOR</div>
-              <h3 className="feature-title">Terima Notifikasi Relevan</h3>
+              <div className="feature-num">03 / TAILOR CV</div>
+              <h3 className="feature-title">Sesuaikan CV Tanpa Halusinasi</h3>
               <p className="feature-desc">
-                Pipeline sistem melakukan seleksi berkala dan hanya mengirimkan lowongan yang lolos ambang batas skor yang kamu tentukan.
+                Satu klik untuk membuat ringkasan & poin CV yang cocok dengan kualifikasi lowongan—dijamin 100% berbasis fakta asli CV-mu.
               </p>
             </div>
           </div>
