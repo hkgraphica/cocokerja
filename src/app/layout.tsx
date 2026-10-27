@@ -20,6 +20,12 @@ export const metadata: Metadata = {
   title: "CocoKerja — Job Alert & Career Copilot di Telegram",
   description:
     "Pantau lowongan kerja relevan sesuai keahlian CV kamu. Lengkap dengan persentase kecocokan, analisis skill gap, dan peringatan lowongan mencurigakan.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "CocoKerja",
+  },
   openGraph: {
     title: "CocoKerja — Asisten Karier Fresh Graduate",
     description: "Job alert terkurasi via Telegram dengan analisis skill gap berbasis profil riil.",
@@ -30,12 +36,33 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#090A0F",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" className={`${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <head>
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
+      <body>
+        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('SW reg error: ', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
+      </body>
     </html>
   );
 }

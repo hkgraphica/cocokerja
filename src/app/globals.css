@@ -575,3 +575,133 @@ body {
 .footer a:hover {
   text-decoration: underline;
 }
+
+/* ==================================================
+   RESPONSIVE DESIGN FOR ALL DEVICES (Mobile, Tablet, Desktop)
+   ================================================== */
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+
+  .header {
+    padding: 16px 0;
+  }
+
+  .nav-actions .link-muted {
+    display: none; /* Sederhanakan navigasi di mobile */
+  }
+
+  .hero {
+    padding: 40px 0 36px;
+  }
+
+  .hero h1 {
+    font-size: 1.85rem;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .hero p.lead {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+
+  .hero-cta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .hero-cta .btn {
+    width: 100%;
+    padding: 12px 20px;
+  }
+
+  .hero-meta {
+    text-align: center;
+    font-size: 0.8rem;
+  }
+
+  .hero-showcase {
+    margin-top: 32px;
+    border-radius: 12px;
+  }
+
+  .hero-overlay-tag {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .hero-overlay-tag .tag-text {
+    font-size: 0.8rem;
+  }
+
+  .hero-overlay-tag .tag-sub {
+    font-size: 0.72rem;
+  }
+
+  .preview-section {
+    margin-bottom: 48px;
+    gap: 32px;
+  }
+
+  .mock-telegram {
+    padding: 16px;
+  }
+
+  .mock-actions {
+    grid-template-columns: 1fr; /* Full width button di layar kecil */
+  }
+
+  .mock-btn-main {
+    grid-column: span 1;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .feature-card {
+    padding: 18px;
+  }
+
+  .section-title {
+    font-size: 1.45rem;
+    margin-bottom: 24px;
+  }
+
+  .cta-panel {
+    padding: 32px 18px;
+    margin: 20px 0 48px;
+  }
+
+  .cta-panel h2 {
+    font-size: 1.45rem;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 24px 0;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
