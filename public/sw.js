@@ -1,8 +1,9 @@
-const CACHE_NAME = "cocokerja-cache-v1";
+const CACHE_NAME = "cocokerja-cache-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
   "/hero-human.jpg",
+  "/icon.ico",
   "/icon-192.png",
   "/icon-512.png"
 ];
@@ -38,6 +39,9 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
+  // Abaikan scheme selain http dan https (seperti chrome-extension://, moz-extension://)
+  if (!url.protocol.startsWith("http")) return;
+
   // Jangan cache endpoint API
   if (url.pathname.startsWith("/api/")) return;
 
