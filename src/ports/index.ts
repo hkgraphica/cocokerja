@@ -1,4 +1,5 @@
 import type { JobData, ProfileData, ScoreResult } from "@/core/types";
+import type { TailorDraft } from "@/core/tailor";
 
 /** Port: kanal pesan (Telegram sekarang, WhatsApp nanti). */
 export interface Button {
@@ -16,6 +17,7 @@ export interface Messenger {
 export interface LlmScorer {
   score(profile: ProfileData, job: JobData): Promise<ScoreResult | null>;
   chatCareerAdvice(profile: ProfileData, userMessage: string): Promise<string | null>;
+  tailorCv(cvText: string, job: JobData): Promise<TailorDraft | null>;
 }
 
 export interface RawJob {

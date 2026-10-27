@@ -3,7 +3,8 @@ import { repos } from "@/adapters/db/repos";
 import type { TgUpdate } from "@/adapters/telegram";
 import { env } from "@/config/env";
 import { parseCv } from "@/core/cv";
-import { encrypt } from "@/core/crypto";
+import { encrypt, decrypt } from "@/core/crypto";
+import { verifyTailor } from "@/core/tailor";
 import { CONSENT_VERSION, escapeHtml, jobCard, MSG } from "@/core/messages";
 import { PLANS } from "@/core/plans";
 import type { Level } from "@/core/types";
@@ -18,6 +19,7 @@ export const feedbackButtons = (matchId: string, url: string) => [
     { text: "📊 Skill gap", data: `gap:${matchId}` },
     { text: "💾 Simpan", data: `track:${matchId}` },
   ],
+  [{ text: "✍️ Sesuaikan CV", data: `tlr:${matchId}` }],
   [
     { text: "👍 Cocok", data: `fb:good:${matchId}` },
     { text: "👎 Tidak relevan", data: `fb:bad:${matchId}` },
@@ -215,7 +217,46 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>, tg: M
     const gaps = row.match.gaps.length ? row.match.gaps.map((g) => `• ${escapeHtml(g)}`).join("\n") : "Tidak ada kekurangan berarti 🎉";
     return tg.send(chatId, `<b>Skill gap — ${escapeHtml(row.job.title)}</b>\nKecocokan ${row.match.score}%\n${gaps}`);
   }
+  if (kind === "tlr") return handleTailor(cb.id, row, user, chatId, tg);
   return tg.answerCallback(cb.id);
+}
+
+async function handleTailor(
+  cbId: string,
+  row: NonNullable<Awaited<ReturnType<typeof repos.getMatch>>>,
+  user: { id: string; tier: string },
+  chatId: string,
+  tg: Messenger,
+) {
+  const plan = PLANS[user.tier as "free" | "premium"];
+  const usage = await repos.getUsage(user.id);
+  if (usage.chatCallsUsed >= plan.chatPerWeek) {
+    return tg.answerCallback(cbId, `Kuota AI minggu ini habis (${plan.chatPerWeek}).`);
+  }
+  const profile = await repos.getProfile(user.id);
+  if (!profile?.cvEnc || !env().LLM_API_KEY) return tg.answerCallback(cbId, "Fitur belum tersedia.");
+  await tg.answerCallback(cbId, "Menyusun CV...");
+
+  const cvText = decrypt(profile.cvEnc, env().ENCRYPTION_KEY);
+  const { OpenAiCompatScorer } = await import("@/adapters/llm");
+  const draft = await new OpenAiCompatScorer().tailorCv(cvText, row.job);
+  if (!draft) return tg.send(chatId, "Maaf, AI sedang sibuk. Coba lagi beberapa menit lagi.");
+
+  const r = verifyTailor(draft, cvText);
+  await repos.addUsage(user.id, { chat: 1 });
+  await repos.track("cv_tailored", user.id, { kept: r.highlights.length, dropped: r.dropped });
+  if (!r.highlights.length) {
+    return tg.send(chatId, "Belum ada bagian CV yang bisa dibuktikan relevan untuk lowongan ini. Coba lowongan lain atau lengkapi CV-mu.");
+  }
+  const lines = [
+    `<b>CV untuk ${escapeHtml(row.job.title)} — ${escapeHtml(row.job.company)}</b>`,
+    `\n<b>Ringkasan</b>\n${escapeHtml(r.summary)}`,
+    `\n<b>Sorotan (semua berasal dari CV-mu)</b>\n${r.highlights.map((h) => `• ${escapeHtml(h)}`).join("\n")}`,
+  ];
+  if (r.missingKeywords.length) {
+    lines.push(`\n<b>Diminta lowongan tapi tidak ada di CV</b>\n${r.missingKeywords.map(escapeHtml).join(", ")}\n<i>Jangan diklaim kecuali benar-benar kamu kuasai.</i>`);
+  }
+  return tg.send(chatId, lines.join("\n"));
 }
 
 export { jobCard };
