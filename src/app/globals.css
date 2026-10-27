@@ -229,6 +229,50 @@ body {
   font-size: 0.85rem;
 }
 
+/* Hero Showcase Image Frame */
+.hero-showcase {
+  margin-top: 48px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.showcase-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+}
+
+.showcase-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.showcase-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #27272A;
+}
+
+.showcase-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.hero-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 /* Main Split: Value vs Interactive Demo */
 .preview-section {
   display: grid;

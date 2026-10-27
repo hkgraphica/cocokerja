@@ -54,6 +54,25 @@ export default function Home() {
             </a>
             <span className="hero-meta">Gratis 3 alert/minggu • Enkripsi CV tersimpan</span>
           </div>
+
+          <div className="hero-showcase" aria-label="Visual Pratinjau Dashboard AI CocoKerja">
+            <div className="showcase-header">
+              <div className="showcase-dots">
+                <span className="showcase-dot" />
+                <span className="showcase-dot" />
+                <span className="showcase-dot" />
+              </div>
+              <span className="showcase-title">cocokerja-intelligence-telemetry.app</span>
+              <span style={{ width: "40px" }} />
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/hero-preview.jpg"
+              alt="Pratinjau antarmuka AI Career Copilot dan Job Matching CocoKerja"
+              className="hero-img"
+              loading="eager"
+            />
+          </div>
         </section>
 
         {/* Split Preview: Real product representation */}
