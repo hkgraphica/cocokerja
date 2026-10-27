@@ -11,6 +11,16 @@ import { feedbackButtons } from "./bot";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const LLM_TOP_N = 8;
 
+/** Lowongan dianggap tutup hanya jika server menjawab 404/410. Gagal jaringan/timeout = anggap masih buka. */
+async function isJobGone(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: "GET", redirect: "follow", signal: AbortSignal.timeout(5000), headers: { "user-agent": "CocoKerjaBot/0.1" } });
+    return res.status === 404 || res.status === 410;
+  } catch {
+    return false;
+  }
+}
+
 /** 1) Ingestion: ambil, normalisasi, dedup, simpan. Satu sumber gagal tidak menghentikan yang lain. */
 export async function ingest(sources: JobSource[]) {
   const stats = { fetched: 0, inserted: 0, errors: [] as string[] };
@@ -101,6 +111,10 @@ export async function sendAlerts(messenger: Messenger, deadline: number) {
     const rows = await repos.unsentMatches(user.id, user.threshold, remaining);
     let delivered = 0;
     for (const { match, job } of rows) {
+      if (await isJobGone(job.url)) {
+        await repos.markSent(match.id); // tandai agar tidak diproses ulang, tidak memakai kuota
+        continue;
+      }
       try {
         await messenger.send(
           user.channelId,
