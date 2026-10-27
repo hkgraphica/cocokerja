@@ -41,6 +41,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  icons: {
+    icon: "/icon.ico",
+    shortcut: "/icon.ico",
+    apple: "/icon-192.png",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
