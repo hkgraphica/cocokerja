@@ -11,6 +11,7 @@ const schema = z.object({
   LLM_MODEL: z.string().default("gpt-4o-mini"),
   /** Daftar URL feed RSS dipisah koma. Gunakan hanya sumber yang mengizinkan. */
   JOB_FEEDS: z.string().default(""),
+  JOB_SOURCES: z.string().default(""),
   TICK_BUDGET_MS: z.coerce.number().default(45000),
 });
 
