@@ -55,23 +55,21 @@ export default function Home() {
             <span className="hero-meta">Gratis 3 alert/minggu • Enkripsi CV tersimpan</span>
           </div>
 
-          <div className="hero-showcase" aria-label="Visual Pratinjau Dashboard AI CocoKerja">
-            <div className="showcase-header">
-              <div className="showcase-dots">
-                <span className="showcase-dot" />
-                <span className="showcase-dot" />
-                <span className="showcase-dot" />
-              </div>
-              <span className="showcase-title">cocokerja-intelligence-telemetry.app</span>
-              <span style={{ width: "40px" }} />
-            </div>
+          <div className="hero-showcase" aria-label="Karier Sukses Bersama CocoKerja">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/hero-preview.jpg"
-              alt="Pratinjau antarmuka AI Career Copilot dan Job Matching CocoKerja"
+              src="/hero-human.jpg"
+              alt="Fresh graduate Indonesia yang percaya diri mempersiapkan karir bersama asisten AI CocoKerja"
               className="hero-img"
               loading="eager"
             />
+            <div className="hero-overlay-tag">
+              <div className="tag-icon">CK</div>
+              <div>
+                <div className="tag-text">Karier Pertama Dimulai dari Peluang yang Tepat</div>
+                <div className="tag-sub">Matching lowongan akurat langsung via @cocokerja_bot Telegram</div>
+              </div>
+            </div>
           </div>
         </section>
 
