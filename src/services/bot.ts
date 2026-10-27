@@ -60,8 +60,44 @@ async function handleMessage(m: Message, tg: Messenger) {
     }
     case "level":
       return askLevel(chatId, tg);
-    default:
-      return tg.send(chatId, "Saya terus memantau lowongan untukmu. Ketik /bantuan untuk daftar perintah.");
+    default: {
+      // User aktif yang mengirim pesan chat bebas -> Masuk ke AI Career Copilot Chat
+      const p = await repos.getProfile(user.id);
+      if (!p) {
+        return tg.send(chatId, "Profilmu belum lengkap. Ketik /start untuk memperbarui data.");
+      }
+
+      const plan = PLANS[user.tier as "free" | "premium"];
+      const currentUsage = await repos.getUsage(user.id);
+      if (currentUsage.llmCallsUsed >= plan.llmPerWeek) {
+        return tg.send(
+          chatId,
+          `⚠️ Kuota konsultasi AI minggu ini sudah mencapai batas (${plan.llmPerWeek} panggilan). Kuota akan direset setiap hari Senin.`,
+        );
+      }
+
+      if (env().LLM_API_KEY) {
+        const { OpenAiCompatScorer } = await import("@/adapters/llm");
+        const llm = new OpenAiCompatScorer();
+        const profileData = {
+          skills: p.skills,
+          education: p.education,
+          preferences: p.preferences as import("@/core/types").Preferences,
+        };
+
+        const answer = await llm.chatCareerAdvice(profileData, text);
+        if (answer) {
+          await repos.addUsage(user.id, { llm: 1 });
+          await repos.track("chat_copilot", user.id, { textLength: text.length });
+          return tg.send(chatId, answer);
+        }
+      }
+
+      return tg.send(
+        chatId,
+        "Saya terus memantau lowongan yang cocok untuk profilmu. Jika ingin konsultasi karier lebih lanjut atau mengecek status, ketik /bantuan atau /status.",
+      );
+    }
   }
 }
 

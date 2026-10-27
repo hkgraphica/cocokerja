@@ -12,9 +12,10 @@ export interface Messenger {
   downloadFile(fileId: string): Promise<Uint8Array>;
 }
 
-/** Port: penilai LLM (opsional). Mengembalikan null bila gagal/tidak dikonfigurasi. */
+/** Port: penilai LLM & copilot karier (opsional). Mengembalikan null bila gagal/tidak dikonfigurasi. */
 export interface LlmScorer {
   score(profile: ProfileData, job: JobData): Promise<ScoreResult | null>;
+  chatCareerAdvice(profile: ProfileData, userMessage: string): Promise<string | null>;
 }
 
 export interface RawJob {

@@ -59,4 +59,44 @@ export class OpenAiCompatScorer implements LlmScorer {
       return null;
     }
   }
+
+  async chatCareerAdvice(profile: ProfileData, userMessage: string): Promise<string | null> {
+    const { LLM_BASE_URL, LLM_API_KEY, LLM_MODEL } = env();
+    if (!LLM_BASE_URL || !LLM_API_KEY) return null;
+    try {
+      const res = await fetch(`${LLM_BASE_URL.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${LLM_API_KEY}` },
+        signal: AbortSignal.timeout(20000),
+        body: JSON.stringify({
+          model: LLM_MODEL,
+          temperature: 0.7,
+          max_tokens: 600,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Kamu adalah CocoKerja AI, asisten dan konsultan karier profesional untuk fresh graduate di Indonesia. " +
+                "Berikan jawaban yang suportif, actionable, dan ringkas dalam format teks Telegram (boleh gunakan <b> atau <i>, hindari markdown markdown tebal berlebihan). " +
+                "Konteks kandidat: " +
+                `Pendidikan: ${profile.education || "-"}, ` +
+                `Skill terdeteksi: ${profile.skills.join(", ") || "-"}, ` +
+                `Peran incaran: ${profile.preferences.roles.join(", ") || "-"}, ` +
+                `Lokasi: ${profile.preferences.location || "-"}. ` +
+                "Jika pengguna bertanya di luar topik karier, CV, portofolio, interview, atau pekerjaan, arahkan kembali dengan sopan ke topik karier.",
+            },
+            {
+              role: "user",
+              content: userMessage.slice(0, 1000),
+            },
+          ],
+        }),
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      return data.choices?.[0]?.message?.content?.trim() ?? null;
+    } catch {
+      return null;
+    }
+  }
 }
