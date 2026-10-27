@@ -1,0 +1,30 @@
+[
+  {
+    "title": "Staf Analis Data & Pelaporan (Fresh Graduate)",
+    "company": "Kementerian Ketenagakerjaan RI - Karirhub",
+    "location": "Jakarta Pusat",
+    "description": "Kualifikasi: S1 Sistem Informasi, Teknik Informatika, Statistika. IPK min 3.00. Menguasai pengolahan data dengan Excel, SQL, dan visualisasi data dasar (Power BI / Tableau). Memiliki kemampuan komunikasi dan analisis yang baik. Terbuka untuk Fresh Graduate.",
+    "url": "https://karirhub.kemnaker.go.id/lowongan-dalam-negeri/lowongan"
+  },
+  {
+    "title": "Junior Web Programmer",
+    "company": "Mitra Rekanan Kemnaker RI",
+    "location": "Jakarta Selatan",
+    "description": "Kualifikasi: D3 / S1 Ilmu Komputer atau jurusan terkait. Menguasai HTML, CSS, JavaScript, TypeScript, dan framework modern seperti React atau Next.js. Mampu bekerja sama dalam tim dan memahami Git. Fresh graduate dipersilakan melamar.",
+    "url": "https://karirhub.kemnaker.go.id/lowongan-dalam-negeri/lowongan"
+  },
+  {
+    "title": "Staf Administrasi & Customer Service",
+    "company": "Pusat Layanan Ketenagakerjaan",
+    "location": "Jakarta Timur",
+    "description": "Kualifikasi: D3 / S1 Semua Jurusan. Mahir mengoperasikan Microsoft Office (Word, Excel). Mampu berkomunikasi dengan ramah dan profesional. Teliti dan berorientasi pada pelayanan masyarakat.",
+    "url": "https://karirhub.kemnaker.go.id/lowongan-dalam-negeri/lowongan"
+  },
+  {
+    "title": "Junior Business Analyst",
+    "company": "BUMN Rekanan Kemnaker",
+    "location": "Jakarta",
+    "description": "Kualifikasi: S1 Manajemen Bisnis, Teknik Industri, Sistem Informasi. Memahami dasar pemetaan proses bisnis, analisis kebutuhan sistem, dan pembuatan dokumentasi PRD/SRS. Fresh graduate dipersilakan melamar.",
+    "url": "https://karirhub.kemnaker.go.id/lowongan-dalam-negeri/lowongan"
+  }
+]
