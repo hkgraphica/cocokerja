@@ -9,6 +9,8 @@ const schema = z.object({
   LLM_BASE_URL: z.string().optional(),
   LLM_API_KEY: z.string().optional(),
   LLM_MODEL: z.string().default("gpt-4o-mini"),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   /** Daftar URL feed RSS dipisah koma. Gunakan hanya sumber yang mengizinkan. */
   JOB_FEEDS: z.string().default(""),
   JOB_SOURCES: z.string().default(""),
