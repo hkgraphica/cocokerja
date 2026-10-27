@@ -1,0 +1,40 @@
+# Stack VPS: Postgres + web + worker. Jalankan: docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cocokerja
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD}
+      POSTGRES_DB: cocokerja
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cocokerja"]
+      interval: 10s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://cocokerja:${POSTGRES_PASSWORD}@db:5432/cocokerja
+      DB_POOL_MAX: "5"
+    ports: ["127.0.0.1:3000:3000"] # taruh Nginx/Caddy + HTTPS di depan
+    depends_on:
+      db: { condition: service_healthy }
+
+  # Worker menggantikan webhook + Vercel Cron: long polling + tick tiap TICK_INTERVAL_MS
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["npx", "tsx", "scripts/worker.ts"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://cocokerja:${POSTGRES_PASSWORD}@db:5432/cocokerja
+      DB_POOL_MAX: "5"
+    depends_on:
+      db: { condition: service_healthy }
+
+volumes:
+  pgdata:
