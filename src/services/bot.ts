@@ -1,20 +1,24 @@
 import { extractText, getDocumentProxy } from "unpdf";
 import { repos } from "@/adapters/db/repos";
 import type { TgUpdate } from "@/adapters/telegram";
+import { fetchJobPage } from "@/adapters/webpage";
 import { env } from "@/config/env";
 import { parseCv } from "@/core/cv";
 import { encrypt, decrypt } from "@/core/crypto";
+import { looksLikeBlockedPage } from "@/core/jobs";
 import { verifyTailor } from "@/core/tailor";
-import { CONSENT_VERSION, escapeHtml, jobCard, MSG } from "@/core/messages";
+import { CONSENT_VERSION, escapeHtml, jobCard, MSG, sanitizeTelegramHtml } from "@/core/messages";
 import { PLANS } from "@/core/plans";
-import type { Level } from "@/core/types";
+import { parseLevel, parseLocation, parseRoles } from "@/core/profile";
+import { heuristicScore, mergeLlmScore } from "@/core/scoring";
 import type { Messenger } from "@/ports";
 
 type Message = NonNullable<TgUpdate["message"]>;
 const MAX_PDF = 5 * 1024 * 1024;
 
-export const feedbackButtons = (matchId: string, url: string) => [
-  [{ text: "🔗 Lamar", url }],
+/** Tombol aksi di bawah kartu lowongan. Tombol Lamar hanya ada bila lowongan punya URL asli. */
+export const feedbackButtons = (matchId: string, url?: string) => [
+  ...(url ? [[{ text: "🔗 Lamar", url }]] : []),
   [
     { text: "📊 Skill gap", data: `gap:${matchId}` },
     { text: "💾 Simpan", data: `track:${matchId}` },
@@ -71,51 +75,53 @@ function looksLikeJobInput(text: string): boolean {
   return isJobKeyword && text.length > 80;
 }
 
+/** Nama host untuk ditampilkan sebagai "perusahaan" bila halaman tidak menyebutkannya. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 async function handleOnDemandJobCheck(text: string, user: { id: string; tier: string; threshold: number }, chatId: string, tg: Messenger) {
   const p = await repos.getProfile(user.id);
   if (!p) return tg.send(chatId, "Profilmu belum lengkap. Ketik /start untuk mengunggah CV terlebih dahulu.");
 
-  const { heuristicScore } = await import("@/core/scoring");
-  const { jobHash, looksSuspicious, stripHtml } = await import("@/core/jobs");
+  const url = text.match(/https?:\/\/[^\s]+/i)?.[0] ?? null;
+  const pasted = text.replace(/https?:\/\/[^\s]+/gi, " ").replace(/\s+/g, " ").trim();
 
-  await tg.send(chatId, "🔍 <i>Sedang menganalisis kecocokan lowongan dengan profil & CV-mu...</i>");
+  await tg.send(chatId, "🔍 <i>Sedang menganalisis kecocokan lowongan dengan profilmu...</i>");
 
-  let title = "Lowongan Pilihan";
-  let company = "Perusahaan";
-  let location = "Indonesia";
-  let description = text;
-  let url = "https://t.me/cocokerja_bot";
+  // Halaman dibaca dengan pengamanan SSRF. Halaman login/captcha dianggap gagal, bukan dinilai sebagai lowongan.
+  let page = url ? await fetchJobPage(url).catch(() => null) : null;
+  if (page && looksLikeBlockedPage(page.title, page.description)) page = null;
 
-  const urlMatch = text.match(/https?:\/\/[^\s]+/i);
-  if (urlMatch) {
-    url = urlMatch[0];
-    try {
-      const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }, signal: AbortSignal.timeout(8000) });
-      if (res.ok) {
-        const html = await res.text();
-        const docTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1];
-        if (docTitle) title = stripHtml(docTitle).slice(0, 100);
-        description = stripHtml(html).slice(0, 5000) || text;
-      }
-    } catch {
-      // Abaikan jika web memblokir bot, pakai teks asli
-    }
+  if (!page && pasted.length < 80) {
+    return tg.send(
+      chatId,
+      "Saya belum bisa membaca isi halaman itu (biasanya karena perlu login atau diblokir). Tempel <b>teks lowongannya</b> di sini, ya.",
+    );
   }
 
-  if (title === "Lowongan Pilihan") {
-    const lines = text.split("\n").filter((l) => l.trim().length > 0);
-    title = lines[0].slice(0, 100).replace(/[*#]/g, "").trim();
-  }
+  const { jobHash, looksSuspicious } = await import("@/core/jobs");
+  const firstLine = text.split("\n").map((l) => l.replace(/https?:\/\/[^\s]+/gi, "").replace(/[*#]/g, "").trim()).find(Boolean) ?? "Lowongan";
+  const title = (page?.title || firstLine).slice(0, 100);
+  const company = page?.company || (url ? hostOf(url) : "") || "Tidak disebut";
+  const location = page?.location ?? "";
+  const description = [pasted, page?.description].filter(Boolean).join("\n").slice(0, 8000);
 
+  // Status "private": lowongan kiriman pengguna tidak boleh ikut dikirim sebagai alert ke pengguna lain.
   const { job } = await repos.upsertJob({
     source: "user_ondemand",
     title,
     company,
     location,
-    description: description.slice(0, 8000),
-    url,
-    suspicious: looksSuspicious(text + " " + description),
-    hash: jobHash(title, company, location + url),
+    description,
+    url: url ?? "https://t.me/cocokerja_bot",
+    suspicious: looksSuspicious(`${text} ${description}`),
+    status: "private",
+    hash: jobHash(title, company, location + (url ?? pasted.slice(0, 300))),
   });
 
   const profileData = {
@@ -125,40 +131,46 @@ async function handleOnDemandJobCheck(text: string, user: { id: string; tier: st
   };
 
   let scoreRes = heuristicScore(profileData, job);
+  let scoredBy = "heuristic";
+  let note = "";
 
-  // Jika LLM aktif, gunakan untuk presisi
+  // Penilaian LLM memakai kuota chat (aksi yang dipicu pengguna). Kuota habis → tetap dijawab dengan skor standar.
   if (env().LLM_API_KEY) {
-    try {
-      const { OpenAiCompatScorer } = await import("@/adapters/llm");
-      const llm = new OpenAiCompatScorer();
-      const refined = await llm.score(profileData, job);
-      if (refined) {
-        scoreRes = { ...refined, components: scoreRes.components };
+    const plan = PLANS[user.tier as "free" | "premium"];
+    const usage = await repos.getUsage(user.id);
+    if (usage.chatCallsUsed < plan.chatPerWeek) {
+      try {
+        const { OpenAiCompatScorer } = await import("@/adapters/llm");
+        const refined = await new OpenAiCompatScorer().score(profileData, job);
+        if (refined) {
+          scoreRes = mergeLlmScore(scoreRes, refined);
+          scoredBy = "llm";
+          await repos.addUsage(user.id, { chat: 1 });
+        }
+      } catch {
+        // fallback ke heuristik
       }
-    } catch {
-      // fallback ke heuristik
+    } else {
+      note = "\n\n<i>Kuota analisis AI minggu ini habis, jadi skor memakai penilaian standar.</i>";
     }
   }
 
-  const matchRecord = {
+  // id match dipakai untuk tombol aksi; upsert juga menyegarkan skor bila lowongan yang sama dicek ulang.
+  const matchId = await repos.upsertMatch({
     userId: user.id,
     jobId: job.id,
     score: scoreRes.score,
     scoreComponents: scoreRes.components,
     reasons: scoreRes.reasons,
     gaps: scoreRes.gaps,
-    scoredBy: env().LLM_API_KEY ? "llm" : "heuristic",
+    scoredBy,
     sentAt: new Date(),
-  };
+  });
 
-  await repos.insertMatch(matchRecord);
-  const match = await repos.getMatch(matchRecord.jobId, user.id);
-  const matchId = match ? match.match.id : job.id;
-
-  await repos.track("ondemand_job_checked", user.id, { score: scoreRes.score });
+  await repos.track("ondemand_job_checked", user.id, { score: scoreRes.score, by: scoredBy, page: Boolean(page) });
 
   const card = jobCard(job, scoreRes, job.suspicious);
-  return tg.send(chatId, `🎯 <b>Hasil Analisis Lowongan Instan:</b>\n\n${card}`, feedbackButtons(matchId, job.url));
+  return tg.send(chatId, `🎯 <b>Hasil Analisis Lowongan Instan:</b>\n\n${card}${note}`, feedbackButtons(matchId, url ?? undefined));
 }
 
 async function handleMessage(m: Message, tg: Messenger) {
@@ -176,16 +188,16 @@ async function handleMessage(m: Message, tg: Messenger) {
     case "cv":
       return handleCv(m, user.id, chatId, tg);
     case "role": {
-      const roles = text.split(",").map((r) => r.trim().toLowerCase()).filter(Boolean).slice(0, 5);
+      const roles = parseRoles(text);
       if (!roles.length) return tg.send(chatId, MSG.askRole);
       await repos.patchPreferences(user.id, { roles });
       await repos.setState(user.id, "location");
       return tg.send(chatId, MSG.askLocation);
     }
     case "location": {
-      if (!text) return tg.send(chatId, MSG.askLocation);
-      const remote = /\bremote\b/i.test(text);
-      await repos.patchPreferences(user.id, { location: text.replace(/\bremote\b/i, "").replace(/[,/&]+/g, " ").trim().toLowerCase(), remote });
+      const loc = parseLocation(text);
+      if (!loc.location && !loc.remote) return tg.send(chatId, MSG.askLocation);
+      await repos.patchPreferences(user.id, loc);
       await repos.setState(user.id, "level");
       return askLevel(chatId, tg);
     }
@@ -222,9 +234,11 @@ async function handleMessage(m: Message, tg: Messenger) {
 
         const answer = await llm.chatCareerAdvice(profileData, text);
         if (answer) {
+          // Sanitasi keluaran LLM; kuota dipotong hanya setelah jawaban benar-benar terkirim.
+          await tg.send(chatId, sanitizeTelegramHtml(answer));
           await repos.addUsage(user.id, { chat: 1 });
           await repos.track("chat_copilot", user.id, { textLength: text.length });
-          return tg.send(chatId, answer);
+          return;
         }
       }
 
@@ -268,21 +282,68 @@ async function handleCv(m: Message, userId: string, chatId: string, tg: Messenge
   if (cvText.length < 80) return tg.send(chatId, m.document ? MSG.cvFailed : MSG.askCv);
 
   const parsed = parseCv(cvText);
+  // Pengguna lama yang memperbarui CV (/cv) sudah punya preferensi: jangan ulangi onboarding.
+  const prev = await repos.getProfile(userId);
+  const isUpdate = Boolean(prev?.preferences.roles.length);
   await repos.saveProfile(userId, { ...parsed, cvEnc: encrypt(cvText.slice(0, 20000), env().ENCRYPTION_KEY) });
-  await repos.setState(userId, "role");
-  await repos.track("cv_parsed", userId, { skills: parsed.skills.length });
+  await repos.setState(userId, isUpdate ? "active" : "role");
+  await repos.track(isUpdate ? "cv_updated" : "cv_parsed", userId, { skills: parsed.skills.length });
 
   const skills = parsed.skills.length ? parsed.skills.map(escapeHtml).join(", ") : "<i>belum terdeteksi</i>";
-  await tg.send(chatId, `📄 CV diterima.\n<b>Skill terdeteksi:</b> ${skills}\n<b>Pendidikan:</b> ${escapeHtml(parsed.education || "-")}`);
+  await tg.send(chatId, `📄 CV ${isUpdate ? "diperbarui" : "diterima"}.\n<b>Skill terdeteksi:</b> ${skills}\n<b>Pendidikan:</b> ${escapeHtml(parsed.education || "-")}`);
+  if (isUpdate) return tg.send(chatId, "✅ Alert dilanjutkan dengan profil terbaru. Ketik /profil untuk melihatnya.");
   await tg.send(chatId, MSG.askRole);
 }
 
 async function handleCommand(text: string, userId: string, state: string, chatId: string, tg: Messenger) {
   const [cmd, arg] = text.split(/\s+/, 2);
   switch (cmd.split("@")[0].toLowerCase()) {
-    case "/start":
-      if (state === "active") return tg.send(chatId, "Kamu sudah terdaftar. Ketik /bantuan untuk perintah.");
+    case "/start": {
+      // Aktif DAN punya profil = sudah terdaftar. Aktif tanpa profil (data tidak lengkap) boleh mengulang.
+      if (state === "active" && (await repos.getProfile(userId))) return tg.send(chatId, "Kamu sudah terdaftar. Ketik /bantuan untuk perintah.");
       return startOnboarding(chatId, userId, tg);
+    }
+    case "/cv":
+      if (state !== "active") return tg.send(chatId, "Selesaikan pendaftaran dulu dengan /start.");
+      await repos.setState(userId, "cv");
+      return tg.send(chatId, `${MSG.askCv}\n\n<i>Alert dijeda sampai CV baru diterima. Ketik /batal untuk membatalkan.</i>`);
+    case "/batal": {
+      const p = await repos.getProfile(userId);
+      if (state === "cv" && p?.preferences.roles.length) {
+        await repos.setState(userId, "active");
+        return tg.send(chatId, "Dibatalkan. CV lamamu tetap dipakai dan alert dilanjutkan.");
+      }
+      return tg.send(chatId, "Tidak ada yang perlu dibatalkan.");
+    }
+    case "/ubah": {
+      const usage = "Contoh:\n<code>/ubah peran data analyst, bi analyst</code>\n<code>/ubah lokasi jakarta, bandung remote</code>\n<code>/ubah level fresh</code> (fresh | magang | any)";
+      const p = await repos.getProfile(userId);
+      if (state !== "active" || !p) return tg.send(chatId, "Selesaikan pendaftaran dulu dengan /start.");
+      const [field = "", ...words] = text.replace(/^\S+\s*/, "").split(/\s+/);
+      const value = words.join(" ").trim();
+      switch (field.toLowerCase()) {
+        case "peran": {
+          const roles = parseRoles(value);
+          if (!roles.length) return tg.send(chatId, usage);
+          await repos.patchPreferences(userId, { roles });
+          return tg.send(chatId, `✅ Peran diubah: <b>${escapeHtml(roles.join(", "))}</b>`);
+        }
+        case "lokasi": {
+          const loc = parseLocation(value);
+          if (!loc.location && !loc.remote) return tg.send(chatId, usage);
+          await repos.patchPreferences(userId, loc);
+          return tg.send(chatId, `✅ Lokasi diubah: <b>${escapeHtml(loc.location || "-")}</b>${loc.remote ? " (+remote)" : ""}`);
+        }
+        case "level": {
+          const level = parseLevel(value);
+          if (!level) return tg.send(chatId, usage);
+          await repos.patchPreferences(userId, { level });
+          return tg.send(chatId, `✅ Level diubah: <b>${level}</b>`);
+        }
+        default:
+          return tg.send(chatId, usage);
+      }
+    }
     case "/bantuan":
     case "/help":
       return tg.send(chatId, MSG.help);
@@ -325,7 +386,9 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>, tg: M
     return tg.send(chatId, MSG.askCv);
   }
   if (kind === "lvl" && user.state === "level") {
-    await repos.patchPreferences(user.id, { level: a as Level });
+    const level = parseLevel(a ?? "");
+    if (!level) return tg.answerCallback(cb.id);
+    await repos.patchPreferences(user.id, { level });
     await repos.setState(user.id, "active");
     await repos.track("onboarding_done", user.id);
     await tg.answerCallback(cb.id);

@@ -29,3 +29,10 @@ const SCAM_RE = /(biaya pendaftaran|deposit|transfer dulu|bayar .* dulu|investas
 
 /** Sinyal sederhana lowongan mencurigakan (PRD F2.3). */
 export const looksSuspicious = (text: string) => SCAM_RE.test(text);
+
+const BLOCKED_TITLE_RE = /(log ?in|sign ?in|sign ?up|masuk|daftar akun|captcha|just a moment|attention required|access denied|forbidden|403|robot)/i;
+
+/** Halaman yang kemungkinan bukan isi lowongan (login wall/captcha/terlalu pendek). */
+export function looksLikeBlockedPage(title: string, text: string): boolean {
+  return text.trim().length < 200 || BLOCKED_TITLE_RE.test(title);
+}

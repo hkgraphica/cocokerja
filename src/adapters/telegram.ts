@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { toPlainText } from "@/core/messages";
 import type { Button, Messenger } from "@/ports";
 
 export interface TgUpdate {
@@ -36,19 +37,22 @@ async function call<T>(method: string, body: unknown): Promise<T> {
 
 export class TelegramMessenger implements Messenger {
   async send(chatId: string, html: string, buttons?: Button[][]) {
-    await call("sendMessage", {
-      chat_id: chatId,
-      text: html,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      ...(buttons && {
-        reply_markup: {
-          inline_keyboard: buttons.map((row) =>
-            row.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data })),
-          ),
-        },
-      }),
-    });
+    const reply_markup = buttons && {
+      inline_keyboard: buttons.map((row) =>
+        row.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data })),
+      ),
+    };
+    try {
+      await call("sendMessage", { chat_id: chatId, text: html, parse_mode: "HTML", disable_web_page_preview: true, ...(reply_markup && { reply_markup }) });
+    } catch (e) {
+      // HTML tidak valid (mis. dari keluaran LLM): kirim ulang sebagai teks polos agar pengguna tetap dapat balasan.
+      const err = e as { code?: number; message?: string };
+      if (err.code === 400 && /parse entities|can't parse/i.test(err.message ?? "")) {
+        await call("sendMessage", { chat_id: chatId, text: toPlainText(html), disable_web_page_preview: true, ...(reply_markup && { reply_markup }) });
+        return;
+      }
+      throw e;
+    }
   }
 
   async answerCallback(callbackId: string, text?: string) {
@@ -65,10 +69,10 @@ export class TelegramMessenger implements Messenger {
 
 export const telegramApi = {
   setWebhook: (url: string, secret: string) =>
-    call("setWebhook", { url, secret_token: secret, allowed_updates: ["message", "callback_query"], drop_pending_updates: true }),
+    call("setWebhook", { url, secret_token: secret, allowed_updates: ["message", "callback_query", "channel_post"], drop_pending_updates: true }),
   deleteWebhook: () => call("deleteWebhook", { drop_pending_updates: false }),
   getUpdates: (offset: number, timeout = 25) =>
-    call<TgUpdate[]>("getUpdates", { offset, timeout, allowed_updates: ["message", "callback_query"] }),
+    call<TgUpdate[]>("getUpdates", { offset, timeout, allowed_updates: ["message", "callback_query", "channel_post"] }),
 };
 
 /** Telegram mengembalikan 403 bila user memblokir bot. */

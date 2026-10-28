@@ -152,6 +152,29 @@ export const repos = {
     await db().insert(matches).values(m).onConflictDoNothing();
   },
 
+  /**
+   * Simpan atau perbarui match (user, lowongan) dan kembalikan id-nya. Dipakai cek lowongan on-demand:
+   * id dibutuhkan untuk tombol aksi, dan pengecekan ulang harus menyegarkan skor (bukan memakai data basi).
+   */
+  async upsertMatch(m: typeof matches.$inferInsert): Promise<string> {
+    const [r] = await db()
+      .insert(matches)
+      .values(m)
+      .onConflictDoUpdate({
+        target: [matches.userId, matches.jobId],
+        set: {
+          score: m.score,
+          scoreComponents: m.scoreComponents,
+          reasons: m.reasons,
+          gaps: m.gaps,
+          scoredBy: m.scoredBy,
+          sentAt: m.sentAt ?? sql`${matches.sentAt}`,
+        },
+      })
+      .returning({ id: matches.id });
+    return r.id;
+  },
+
   async insertMatches(rows: (typeof matches.$inferInsert)[]) {
     for (const part of chunk(rows, BATCH)) {
       await db().insert(matches).values(part).onConflictDoNothing();
@@ -175,6 +198,16 @@ export const repos = {
         and(
           eq(jobs.status, "expired"),
           lt(jobs.fetchedAt, ago(90)),
+          notExists(db().select({ one: sql`1` }).from(applications).where(eq(applications.jobId, jobs.id))),
+        ),
+      );
+    // Lowongan kiriman on-demand (private) hanya relevan sementara; yang disimpan ke tracker tetap dipertahankan.
+    await db()
+      .delete(jobs)
+      .where(
+        and(
+          eq(jobs.status, "private"),
+          lt(jobs.fetchedAt, ago(30)),
           notExists(db().select({ one: sql`1` }).from(applications).where(eq(applications.jobId, jobs.id))),
         ),
       );

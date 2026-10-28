@@ -4,7 +4,7 @@ import { mapLimit } from "@/core/concurrency";
 import { jobHash, looksSuspicious } from "@/core/jobs";
 import { jobCard } from "@/core/messages";
 import { PLANS } from "@/core/plans";
-import { heuristicScore } from "@/core/scoring";
+import { heuristicScore, mergeLlmScore } from "@/core/scoring";
 import type { Preferences, ScoreResult, Tier } from "@/core/types";
 import type { JobSource, LlmScorer, Messenger } from "@/ports";
 import { feedbackButtons } from "./bot";
@@ -98,8 +98,8 @@ export async function runMatching(llm: LlmScorer | null, deadline: number) {
       llmUsed++;
       const refined = await llm!.score(data, item.job);
       if (refined) {
-        // Komponen terstruktur tetap dari heuristik (auditable); alasan & skor dari LLM.
-        item.r = { ...refined, components: item.r.components };
+        // Komponen dari heuristik (auditable), alasan & skor dari LLM; batas skor untuk level senior ditegakkan.
+        item.r = mergeLlmScore(item.r, refined);
         item.by = "llm";
       }
     });
