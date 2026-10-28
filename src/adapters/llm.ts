@@ -35,28 +35,43 @@ function getEndpoints(): LlmEndpoint[] {
   const e = env();
   const list: LlmEndpoint[] = [];
 
-  // Provider 1: Gemini (Official Google AI Studio via OpenAI-compatible endpoint)
+  // Provider 1: Gemini (Official Google AI Studio)
   if (e.GEMINI_API_KEY) {
     list.push({
-      name: "gemini",
+      name: "gemini:primary",
       url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       apiKey: e.GEMINI_API_KEY,
       model: e.GEMINI_MODEL || "gemini-2.5-flash",
     });
   }
 
-  // Provider 2: Nexotao / OpenAI compat
+  // Provider 2: Nexotao Multi-Model Candidates (Coba model DeepSeek & GPT tanpa perlu ubah .env)
   if (e.LLM_BASE_URL && e.LLM_API_KEY) {
-    list.push({
-      name: "nexotao",
-      url: `${e.LLM_BASE_URL.replace(/\/$/, "")}/chat/completions`,
-      apiKey: e.LLM_API_KEY,
-      model: e.LLM_MODEL || "gpt-5.6-luna",
-    });
+    const baseUrl = `${e.LLM_BASE_URL.replace(/\/$/, "")}/chat/completions`;
+    const candidates = [
+      e.LLM_MODEL,           // Model pilihan di .env jika ada
+      "deepseek-v3-2",       // DeepSeek V3.2 di Nexotao
+      "deepseek-chat",       // DeepSeek Chat standar
+      "gpt-4o-mini",         // OpenAI ekonomis
+      "gpt-5.6-luna",        // Model default sebelumnya
+    ].filter(Boolean) as string[];
+
+    // Hilangkan duplikat kandidat
+    const uniqueModels = [...new Set(candidates)];
+
+    for (const model of uniqueModels) {
+      list.push({
+        name: `nexotao:${model}`,
+        url: baseUrl,
+        apiKey: e.LLM_API_KEY,
+        model,
+      });
+    }
   }
 
   return list;
 }
+
 
 async function requestLlm(
   messages: ChatMessage[],
