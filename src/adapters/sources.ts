@@ -136,6 +136,94 @@ export class RemotiveSource implements JobSource {
   }
 }
 
+/** Channel Telegram Publik (t.me/s/) kurasi Indonesia / fresh graduate. */
+export class TelegramChannelSource implements JobSource {
+  readonly name: string;
+  private readonly channelName: string;
+
+  constructor(channel: string) {
+    this.channelName = channel.replace(/^@/, "").replace(/^https?:\/\/t\.me\/(?:s\/)?/, "").trim();
+    this.name = `telegram:@${this.channelName}`;
+  }
+
+  async fetch(): Promise<RawJob[]> {
+    const url = `https://t.me/s/${this.channelName}`;
+    const res = await fetch(url, {
+      headers: {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept": "text/html,application/xhtml+xml",
+        "accept-language": "id,en-US;q=0.9,en;q=0.8",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) return [];
+
+    const html = await res.text();
+    const parts = html.split('<div class="tgme_widget_message ');
+    const jobs: RawJob[] = [];
+
+    for (let i = 1; i < parts.length; i++) {
+      const block = parts[i];
+      const postTagMatch = block.match(/data-post="([^"]+)"/);
+      if (!postTagMatch) continue;
+      const postTag = postTagMatch[1];
+
+      const textMatch = block.match(/<div class="[^"]*tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      if (!textMatch) continue;
+
+      const rawContent = textMatch[1];
+      // Pertahankan ganti baris sebelum stripHtml agar pemisahan baris per paragraf tidak hilang
+      const text = rawContent
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/div>|<\/p>/gi, "\n")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/[ \t]+/g, " ")
+        .trim();
+      if (text.length < 60) continue;
+
+      // Filter relevansi: pastikan memuat indikator lowongan kerja riil
+      const isJob = /\b(hiring|lowongan|loker|we're hiring|posisi|dibutuhkan|kualifikasi|persyaratan|requirements|job description|fresh graduate|magang|internship)\b/i.test(text);
+      if (!isJob) continue;
+
+      const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+      const firstLine = lines[0] || "";
+
+      let title = (firstLine.match(/^(?:lowongan(?:\s+kerja)?|loker|we(?:'re|\s+are)\s+hiring|dicari|posisi)\s*[:\-–]?\s*(.+)/i)?.[1] || firstLine)
+        .replace(/[#*`_]/g, "")
+        .trim();
+      if (title.length > 90) title = title.slice(0, 87) + "...";
+
+      const companyMatch = text.match(/\b(?:pt|cv)\.?\s+([a-zA-Z0-9\s.,]+)/i) || text.match(/(?:startup|perusahaan|at)\s+([a-zA-Z0-9\s.,]+)/i);
+      let company = companyMatch ? (companyMatch[0].startsWith("pt") || companyMatch[0].startsWith("cv") || companyMatch[0].startsWith("PT") || companyMatch[0].startsWith("CV") ? companyMatch[0] : companyMatch[1]).split("\n")[0].split(/\s+di\s+/i)[0].replace(/[#*`_]/g, "").slice(0, 60).trim() : `@${this.channelName}`;
+
+      const locMatch = text.match(/(?:lokasi|penempatan|domisili)\s*[:\-–]?\s*([a-zA-Z0-9\s.,]+)/i) || text.match(/\bdi\s+([a-zA-Z\s]+)/i);
+      let location = locMatch ? locMatch[1].split("\n")[0].replace(/[#*`_]/g, "").slice(0, 60).trim() : (/\bremote\b/i.test(text) ? "Remote" : "Indonesia");
+
+      const urlMatch = text.match(/https?:\/\/[^\s"'<>]+/i);
+      const applyUrl = urlMatch ? urlMatch[0] : `https://t.me/${postTag}`;
+      const postId = postTag.split("/")[1] || String(Date.now());
+
+      jobs.push({
+        externalId: `tg-${this.channelName}-${postId}`,
+        title: title || "Lowongan Komunitas",
+        company: company || `@${this.channelName}`,
+        location: location || "Indonesia",
+        description: text.slice(0, 8000),
+        url: applyUrl,
+      });
+    }
+
+    return jobs;
+  }
+}
+
 /** JOB_SOURCES: daftar dipisah koma, mis. "greenhouse:xendit,lever:nium,ashby:airwallex,remotive". */
 function parseSource(spec: string): JobSource | null {
   const [kind, slug] = spec.split(":");
@@ -150,5 +238,7 @@ export function configuredSources(cache?: FetchCache): JobSource[] {
   return [
     ...csv(e.JOB_FEEDS).map((u) => new RssSource(u, cache)),
     ...csv(e.JOB_SOURCES).map(parseSource).filter((s): s is JobSource => s !== null),
+    ...csv(e.TELEGRAM_CHANNELS).map((ch) => new TelegramChannelSource(ch)),
   ];
 }
+

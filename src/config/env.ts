@@ -14,6 +14,8 @@ const schema = z.object({
   /** Daftar URL feed RSS dipisah koma. Gunakan hanya sumber yang mengizinkan. */
   JOB_FEEDS: z.string().default(""),
   JOB_SOURCES: z.string().default(""),
+  /** Daftar channel publik Telegram dipisah koma untuk dipanen secara otomatis. */
+  TELEGRAM_CHANNELS: z.string().default("lokerblog,lokernastelegram,lokerkarawangnet"),
   TICK_BUDGET_MS: z.coerce.number().default(45000),
 });
 

@@ -48,3 +48,34 @@ describe("RssSource conditional GET", () => {
     expect(await new RssSource("https://x.test/feed").fetch()).toHaveLength(1);
   });
 });
+
+describe("TelegramChannelSource", () => {
+  it("mem-parse postingan loker dari halaman preview Telegram dan memfilter non-loker", async () => {
+    const { TelegramChannelSource } = await import("@/adapters/sources");
+    const htmlSample = `
+      <div class="tgme_widget_message " data-post="lokerblog/101">
+        <div class="tgme_widget_message_text js-message_text">
+          Lowongan Kerja Frontend Engineer<br>PT Teknologi Maju di Jakarta Selatan<br>Kualifikasi: Fresh graduate S1 Ilmu Komputer dipersilakan melamar.<br>https://karir.contoh.com/apply
+        </div>
+      </div>
+      <div class="tgme_widget_message " data-post="lokerblog/102">
+        <div class="tgme_widget_message_text js-message_text">
+          Halo teman-teman, jangan lupa join grup diskusi kami ya di @diskusi. Selamat berakhir pekan!
+        </div>
+      </div>
+    `;
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(htmlSample, { status: 200 })));
+
+    const src = new TelegramChannelSource("lokerblog");
+    const jobs = await src.fetch();
+
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].title).toBe("Frontend Engineer");
+    expect(jobs[0].company).toBe("PT Teknologi Maju");
+    expect(jobs[0].location).toBe("Jakarta Selatan");
+    expect(jobs[0].url).toBe("https://karir.contoh.com/apply");
+    expect(jobs[0].externalId).toBe("tg-lokerblog-101");
+  });
+});
+
