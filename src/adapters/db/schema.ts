@@ -17,7 +17,7 @@ export const users = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique("users_channel_uq").on(t.channel, t.channelId)],
+  (t) => [unique("users_channel_uq").on(t.channel, t.channelId), index("users_state_active_idx").on(t.state, t.isActive)],
 );
 
 export const profiles = pgTable("profiles", {
@@ -51,7 +51,13 @@ export const jobs = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     hash: text("hash").notNull(),
   },
-  (t) => [unique("jobs_hash_uq").on(t.hash), index("jobs_status_fetched_idx").on(t.status, t.fetchedAt)],
+  (t) => [
+    unique("jobs_hash_uq").on(t.hash),
+    index("jobs_status_fetched_idx").on(t.status, t.fetchedAt),
+    // Mempercepat ilike '%kata%' di candidateJobs. Parsial: hanya job aktif, jadi kecil & ikut menyusut saat purge.
+    index("jobs_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")).where(sql`status = 'active'`),
+    index("jobs_desc_trgm_idx").using("gin", t.description.op("gin_trgm_ops")).where(sql`status = 'active'`),
+  ],
 );
 
 export const matches = pgTable(
@@ -69,7 +75,12 @@ export const matches = pgTable(
     feedback: text("feedback"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique("matches_user_job_uq").on(t.userId, t.jobId), index("matches_user_sent_idx").on(t.userId, t.sentAt)],
+  (t) => [
+    unique("matches_user_job_uq").on(t.userId, t.jobId),
+    index("matches_user_sent_idx").on(t.userId, t.sentAt),
+    // Melayani unsentMatches: hanya baris belum terkirim, urut skor.
+    index("matches_unsent_idx").on(t.userId, t.score.desc()).where(sql`sent_at is null`),
+  ],
 );
 
 export const applications = pgTable(
@@ -135,7 +146,19 @@ export const jobsQueue = pgTable(
 );
 
 /** Idempotensi webhook Telegram. */
-export const tgUpdates = pgTable("tg_updates", {
-  updateId: bigint("update_id", { mode: "number" }).primaryKey(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+export const tgUpdates = pgTable(
+  "tg_updates",
+  {
+    updateId: bigint("update_id", { mode: "number" }).primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("tg_updates_created_idx").on(t.createdAt)],
+);
+
+/** Validator HTTP per sumber feed (ETag/Last-Modified) untuk conditional GET. */
+export const sourceState = pgTable("source_state", {
+  source: text("source").primaryKey(),
+  etag: text("etag"),
+  lastModified: text("last_modified"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

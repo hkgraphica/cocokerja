@@ -34,3 +34,15 @@ export interface JobSource {
   name: string;
   fetch(): Promise<RawJob[]>;
 }
+
+/** Validator HTTP untuk conditional GET (hemat bandwidth, lebih sopan ke sumber). */
+export interface FetchValidators {
+  etag?: string | null;
+  lastModified?: string | null;
+}
+
+/** Port: penyimpanan validator per sumber. Kegagalan penyimpanan tidak boleh menggagalkan fetch. */
+export interface FetchCache {
+  get(key: string): Promise<FetchValidators | null>;
+  set(key: string, v: FetchValidators): Promise<void>;
+}

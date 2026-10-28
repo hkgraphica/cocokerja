@@ -1,9 +1,13 @@
 import { and, desc, eq, gte, ilike, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
+import { chunk } from "@/core/concurrency";
 import { isoWeek } from "@/core/plans";
 import type { Preferences, Tier, UserState } from "@/core/types";
 import { db, schema } from "./client";
 
-const { users, profiles, jobs, matches, applications, usage, events, tgUpdates } = schema;
+const { users, profiles, jobs, matches, applications, usage, events, tgUpdates, sourceState } = schema;
+
+/** Ukuran batch insert; menjaga jumlah parameter query jauh di bawah batas protokol Postgres. */
+const BATCH = 100;
 
 export type User = typeof users.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
@@ -15,6 +19,16 @@ export const repos = {
   async markUpdate(updateId: number): Promise<boolean> {
     const r = await db().insert(tgUpdates).values({ updateId }).onConflictDoNothing().returning();
     return r.length > 0;
+  },
+
+  async getSourceState(source: string) {
+    const [r] = await db().select().from(sourceState).where(eq(sourceState.source, source));
+    return r ? { etag: r.etag, lastModified: r.lastModified } : null;
+  },
+
+  async saveSourceState(source: string, v: { etag?: string | null; lastModified?: string | null }) {
+    const set = { etag: v.etag ?? null, lastModified: v.lastModified ?? null, updatedAt: new Date() };
+    await db().insert(sourceState).values({ source, ...set }).onConflictDoUpdate({ target: sourceState.source, set });
   },
 
   async upsertUser(channel: string, channelId: string): Promise<User> {
@@ -57,12 +71,14 @@ export const repos = {
     return p ? { ...p, preferences: { ...DEFAULT_PREFS, ...(p.preferences as Partial<Preferences>) } } : null;
   },
 
+  /** Merge atomik di sisi DB (jsonb ||) agar update bersamaan tidak saling menimpa. */
   async patchPreferences(userId: string, patch: Partial<Preferences>) {
-    const p = await repos.getProfile(userId);
-    if (!p) return;
     await db()
       .update(profiles)
-      .set({ preferences: { ...p.preferences, ...patch }, updatedAt: new Date() })
+      .set({
+        preferences: sql`coalesce(${profiles.preferences}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+        updatedAt: new Date(),
+      })
       .where(eq(profiles.userId, userId));
   },
 
@@ -85,12 +101,22 @@ export const repos = {
     return r.length > 0;
   },
 
-  /** Simpan atau dapatkan lowongan berdasarkan hash, kembalikan data recordnya */
+  /** Insert massal (chunk); kembalikan jumlah baris yang benar-benar baru. Duplikat hash diabaikan. */
+  async insertJobs(rows: (typeof jobs.$inferInsert)[]): Promise<number> {
+    let inserted = 0;
+    for (const part of chunk(rows, BATCH)) {
+      const r = await db().insert(jobs).values(part).onConflictDoNothing({ target: jobs.hash }).returning({ id: jobs.id });
+      inserted += r.length;
+    }
+    return inserted;
+  },
+
+  /** Simpan atau dapatkan lowongan berdasarkan hash, kembalikan data recordnya. Aman terhadap race. */
   async upsertJob(j: typeof jobs.$inferInsert) {
-    const existing = await db().select().from(jobs).where(eq(jobs.hash, j.hash)).limit(1);
-    if (existing[0]) return { job: existing[0], isNew: false };
-    const inserted = await db().insert(jobs).values(j).returning();
-    return { job: inserted[0], isNew: true };
+    const inserted = await db().insert(jobs).values(j).onConflictDoNothing({ target: jobs.hash }).returning();
+    if (inserted[0]) return { job: inserted[0], isNew: true };
+    const [existing] = await db().select().from(jobs).where(eq(jobs.hash, j.hash)).limit(1);
+    return { job: existing, isNew: false };
   },
 
   async expireOldJobs(days = 45) {
@@ -100,9 +126,10 @@ export const repos = {
 
   /** Penyaringan awal SQL: lowongan aktif, belum pernah dinilai untuk user ini, dan menyebut peran. */
   async candidateJobs(userId: string, roles: string[], limit = 100) {
+    const esc = (s: string) => s.replace(/[\\%_]/g, "\\$&"); // role dari user: % dan _ bukan wildcard
     const roleFilters = roles
       .filter(Boolean)
-      .flatMap((r) => [ilike(jobs.title, `%${r}%`), ilike(jobs.description, `%${r}%`)]);
+      .flatMap((r) => [ilike(jobs.title, `%${esc(r)}%`), ilike(jobs.description, `%${esc(r)}%`)]);
     const since = new Date(Date.now() - 30 * 86400000);
     return db()
       .select()
@@ -123,6 +150,34 @@ export const repos = {
 
   async insertMatch(m: typeof matches.$inferInsert) {
     await db().insert(matches).values(m).onConflictDoNothing();
+  },
+
+  async insertMatches(rows: (typeof matches.$inferInsert)[]) {
+    for (const part of chunk(rows, BATCH)) {
+      await db().insert(matches).values(part).onConflictDoNothing();
+    }
+  },
+
+  /** Tandai banyak match terkirim sekaligus. */
+  async markSentMany(matchIds: string[]) {
+    if (!matchIds.length) return;
+    await db().update(matches).set({ sentAt: new Date() }).where(inArray(matches.id, matchIds));
+  },
+
+  /** Buang data kedaluwarsa agar tabel tidak tumbuh tanpa batas. Cascade membersihkan matches. */
+  async purgeStale() {
+    const ago = (days: number) => new Date(Date.now() - days * 86400000);
+    await db().delete(tgUpdates).where(lt(tgUpdates.createdAt, ago(7)));
+    await db().delete(events).where(lt(events.createdAt, ago(90)));
+    await db()
+      .delete(jobs)
+      .where(
+        and(
+          eq(jobs.status, "expired"),
+          lt(jobs.fetchedAt, ago(90)),
+          notExists(db().select({ one: sql`1` }).from(applications).where(eq(applications.jobId, jobs.id))),
+        ),
+      );
   },
 
   async unsentMatches(userId: string, minScore: number, limit: number) {

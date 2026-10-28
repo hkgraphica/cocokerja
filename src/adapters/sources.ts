@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { env } from "@/config/env";
 import { stripHtml } from "@/core/jobs";
-import type { JobSource, RawJob } from "@/ports";
+import type { FetchCache, JobSource, RawJob } from "@/ports";
 
 const parser = new XMLParser({ ignoreAttributes: false, processEntities: true });
 
@@ -14,16 +14,31 @@ const text = (v: unknown): string => {
 /** Feed RSS/Atom generik. Konvensi umum: judul "Posisi - Perusahaan" atau "Posisi at Perusahaan". */
 export class RssSource implements JobSource {
   readonly name: string;
-  constructor(private readonly url: string) {
-    this.name = new URL(url).hostname;
+  constructor(private readonly url: string, private readonly cache?: FetchCache) {
+    let host = url;
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      // URL tidak valid: biarkan fetch() gagal terisolasi per-sumber, bukan melempar saat konfigurasi dimuat.
+    }
+    this.name = host;
   }
 
   async fetch(): Promise<RawJob[]> {
-    const res = await fetch(this.url, {
-      headers: { "user-agent": "CocoKerjaBot/0.1 (+kontak pemilik)" },
-      signal: AbortSignal.timeout(15000),
-    });
+    const headers: Record<string, string> = { "user-agent": "CocoKerjaBot/0.1 (+kontak pemilik)" };
+    // Kunci = URL penuh (hostname bisa sama untuk beberapa feed). Kegagalan cache jangan menggagalkan fetch.
+    const prev = await this.cache?.get(this.url).catch(() => null);
+    if (prev?.etag) headers["if-none-match"] = prev.etag;
+    if (prev?.lastModified) headers["if-modified-since"] = prev.lastModified;
+
+    const res = await fetch(this.url, { headers, signal: AbortSignal.timeout(15000) });
+    if (res.status === 304) return []; // tidak berubah sejak fetch terakhir
     if (!res.ok) throw new Error(`${this.name}: HTTP ${res.status}`);
+
+    const etag = res.headers.get("etag");
+    const lastModified = res.headers.get("last-modified");
+    if (this.cache && (etag || lastModified)) await this.cache.set(this.url, { etag, lastModified }).catch(() => {});
+
     const doc = parser.parse(await res.text());
     const items: Record<string, unknown>[] = [].concat(doc?.rss?.channel?.item ?? doc?.feed?.entry ?? []);
     return items.slice(0, 200).map((it) => {
@@ -44,10 +59,21 @@ export class RssSource implements JobSource {
 
 const UA = { "user-agent": "CocoKerjaBot/0.1 (+kontak pemilik)" };
 
+/** GET JSON dengan satu kali retry untuk gangguan sementara (5xx/429/jaringan). */
 async function getJson<T>(url: string, name: string): Promise<T> {
-  const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
-  return (await res.json()) as T;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(15000) });
+      if (res.ok) return (await res.json()) as T;
+      lastErr = new Error(`${name}: HTTP ${res.status}`);
+      if (res.status < 500 && res.status !== 429) break; // 4xx permanen: jangan coba lagi
+    } catch (e) {
+      lastErr = e;
+    }
+    await new Promise((r) => setTimeout(r, 800));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`${name}: gagal`);
 }
 
 const ID_RE = /indonesia|jakarta|bandung|surabaya|yogyakarta|bali|tangerang|bekasi|depok|bogor|semarang|medan/i;
@@ -118,11 +144,11 @@ function parseSource(spec: string): JobSource | null {
   return null;
 }
 
-export function configuredSources(): JobSource[] {
+export function configuredSources(cache?: FetchCache): JobSource[] {
   const csv = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
   const e = env();
   return [
-    ...csv(e.JOB_FEEDS).map((u) => new RssSource(u)),
+    ...csv(e.JOB_FEEDS).map((u) => new RssSource(u, cache)),
     ...csv(e.JOB_SOURCES).map(parseSource).filter((s): s is JobSource => s !== null),
   ];
 }
