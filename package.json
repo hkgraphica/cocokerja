@@ -15,7 +15,8 @@
     "db:push": "drizzle-kit push",
     "worker": "tsx --env-file=.env scripts/worker.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
-    "set-webhook": "tsx --env-file=.env scripts/set-webhook.ts"
+    "set-webhook": "tsx --env-file=.env scripts/set-webhook.ts",
+    "harvest": "tsx --env-file=.env scripts/harvest-telegram.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
