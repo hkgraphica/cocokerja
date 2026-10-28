@@ -73,6 +73,8 @@ export const telegramApi = {
   deleteWebhook: () => call("deleteWebhook", { drop_pending_updates: false }),
   getUpdates: (offset: number, timeout = 25) =>
     call<TgUpdate[]>("getUpdates", { offset, timeout, allowed_updates: ["message", "callback_query", "channel_post"] }),
+  setMyCommands: (commands: { command: string; description: string }[]) =>
+    call("setMyCommands", { commands }),
 };
 
 /** Telegram mengembalikan 403 bila user memblokir bot. */
