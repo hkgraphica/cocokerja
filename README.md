@@ -42,7 +42,7 @@
 | 🧮 | **Skor transparan** | Skor heuristik berbobot yang bisa diaudit, diperhalus LLM hanya untuk kandidat teratas. |
 | 🛡️ | **Anti-scam** | Setiap lowongan dicek indikasi penipuan (biaya pendaftaran, deposit, MLM). |
 | ✂️ | **Tailor CV** | Menyusun ringkasan CV per lowongan. Semua klaim diverifikasi terhadap CV asli. |
-| 🔎 | **Cek lowongan instan** | Tempel teks/tautan lowongan, langsung dapat analisis kecocokan. |
+| 🔎 | **Cek lowongan instan** | Tempel teks/tautan lowongan, langsung dapat analisis kecocokan. Data terstruktur (JSON-LD) dibaca bila ada; halaman login diminta ditempel teksnya. |
 | 💬 | **Copilot karier** | Konsultasi karier lewat chat bebas (dibatasi kuota mingguan). |
 | 🧩 | **Skill gap & tracker** | Lihat kekurangan skill per lowongan dan simpan ke tracker lamaran. |
 | 🔒 | **Privasi** | CV terenkripsi AES-256-GCM; hapus seluruh data kapan saja dengan `/hapus ya`. |
@@ -88,6 +88,8 @@ flowchart LR
 | `/profil` | Lihat skill, peran, lokasi, dan level tersimpan |
 | `/status` | Paket, pemakaian alert minggu ini, dan ambang skor |
 | `/ambang 70` | Atur ambang skor alert (30–95) |
+| `/ubah peran ...` / `lokasi ...` / `level ...` | Ubah preferensi tanpa mendaftar ulang (mis. `/ubah lokasi jakarta, bandung remote`) |
+| `/cv` | Perbarui CV (kirim PDF/tempel teks); `/batal` untuk membatalkan |
 | `/bantuan` | Daftar perintah |
 | `/hapus ya` | Hapus profil, match, dan tracker; event dianonimkan |
 
@@ -193,7 +195,10 @@ Salin [`.env.example`](./.env.example) menjadi `.env`. Variabel utama:
 - Webhook Telegram diverifikasi lewat header secret; cron lewat bearer secret (perbandingan *constant-time*).
 - Idempotensi update Telegram (`tg_updates`), dedup lowongan berdasar hash, unik per (user, lowongan).
 - `/hapus ya` menghapus profil, match, dan tracker; event dianonimkan.
-- LLM hanya menerima skill, ringkasan pendidikan, dan preferensi, **tanpa CV mentah atau identitas**.
+- Data yang dikirim ke penyedia LLM: untuk skoring dan chat hanya skill, ringkasan pendidikan, dan preferensi. **Khusus fitur Sesuaikan CV, teks CV mentah dikirim** ke penyedia (diungkapkan di pesan persetujuan).
+- Keluaran LLM disanitasi sebelum dikirim ke Telegram (hanya `<b>`/`<i>`/`<u>`/`<code>`/`<pre>`); bila tetap ditolak, dikirim ulang sebagai teks polos.
+- Cek Lowongan Instan membuka URL pengguna dengan pagar SSRF: hanya http(s) port standar, semua hop (termasuk redirect) harus beralamat publik, ukuran dan waktu dibatasi. Lowongan kiriman pengguna berstatus `private` dan tidak pernah dikirim sebagai alert ke pengguna lain.
+- Skor dibatasi secara tegas di kode: level senior/≥3 tahun ≤ 40, lokasi jelas berbeda ≤ 55 (di bawah ambang alert default).
 
 ## Roadmap
 
@@ -202,6 +207,7 @@ Salin [`.env.example`](./.env.example) menjadi `.env`. Variabel utama:
 - [x] Cek lowongan on-demand, skill gap, tracker sederhana
 - [x] Tailor CV dengan verifikasi anti-halusinasi
 - [x] Pencarian cepat (trigram) & conditional GET untuk RSS
+- [x] Skoring lebih akurat (level, lokasi, pengalaman) & pembaruan profil (`/ubah`, `/cv`)
 - [ ] Simulasi interview
 - [ ] Tracker status lamaran penuh
 - [ ] Pembayaran & paket Premium
