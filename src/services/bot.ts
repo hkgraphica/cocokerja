@@ -219,10 +219,42 @@ async function handleMessage(m: Message, tg: Messenger) {
         return handleOnDemandJobCheck(text, user, chatId, tg);
       }
 
-      // User aktif yang mengirim pesan chat bebas -> Masuk ke AI Career Copilot Chat
+      // User aktif yang mengirim pesan chat bebas
       const p = await repos.getProfile(user.id);
       if (!p) {
         return tg.send(chatId, "Profilmu belum lengkap. Ketik /start untuk memperbarui data.");
+      }
+
+      // Deteksi cepat jika user bertanya tentang jadwal / jam kirim notifikasi
+      if (/((jam|kapan|waktu|pukul)\s+(berapa|saja)?.*(notif|loker|alert|kirim)|setiap\s+jam)/i.test(text)) {
+        return tg.send(
+          chatId,
+          "⏰ <b>Jadwal Job Alert CocoKerja:</b>\n\n" +
+          "CocoKerja secara otomatis memindai dan mengirimkan lowongan terkurasi setiap hari kerja pada pukul <b>08:00 WIB</b> jika ada lowongan yang mencapai skor kecocokan dengan CV-mu.\n\n" +
+          "💡 <i>Tips:</i> Kamu juga bisa langsung mengecek lowongan sendiri kapan saja dengan mengirimkan link atau teks lowongan ke chat ini!"
+        );
+      }
+
+      // Deteksi cepat jika user bertanya apakah ada loker cocok / temukan lowongan
+      if (/(apakah.*(ada|ditemukan).*loker|ada.*loker.*(cocok|baru)|rekomendasi.*loker|cari.*loker)/i.test(text)) {
+        const candidates = await repos.candidateJobs(user.id, p.preferences.roles ?? []);
+        if (candidates.length > 0) {
+          const topCandidates = candidates.slice(0, 3);
+          const list = topCandidates
+            .map((j, i) => `${i + 1}. <b>${escapeHtml(j.title)}</b> — ${escapeHtml(j.company)} (${escapeHtml(j.location || "Indonesia")})\n🔗 <a href="${j.url}">Lihat Detail</a>`)
+            .join("\n\n");
+          return tg.send(
+            chatId,
+            `🎯 <b>Lowongan aktif yang relevan di radar CocoKerja:</b>\n\n${list}\n\n` +
+            `Kirimkan link loker di atas ke sini jika ingin saya hitung skor kecocokan detailnya dengan CV kamu!`
+          );
+        } else {
+          return tg.send(
+            chatId,
+            "🔍 Belum ada lowongan baru yang melampaui ambang batas skor profilmu saat ini.\n\n" +
+            "Sistem terus memantau feed secara otomatis setiap hari. Kamu juga bisa memperbarui peran incaranmu dengan mengetik <code>/ubah peran [nama posisi]</code> atau mengecek profilmu dengan <code>/profil</code>."
+          );
+        }
       }
 
       const plan = PLANS[user.tier as "free" | "premium"];
