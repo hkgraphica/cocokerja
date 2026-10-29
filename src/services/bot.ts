@@ -361,7 +361,9 @@ async function handleCv(m: Message, userId: string, chatId: string, tg: Messenge
   try {
     if (m.document) {
       if ((m.document.file_size ?? 0) > MAX_PDF || m.document.mime_type !== "application/pdf") {
-        return tg.send(chatId, MSG.cvFailed);
+        return tg.send(chatId, MSG.cvFailed, [
+          [{ text: "⏩ Lewati CV & Pilih Peran Dulu", data: "cv:skip" }],
+        ]);
       }
       const pdf = await getDocumentProxy(await tg.downloadFile(m.document.file_id));
       cvText = (await extractText(pdf, { mergePages: true })).text;
@@ -369,10 +371,16 @@ async function handleCv(m: Message, userId: string, chatId: string, tg: Messenge
       cvText = m.text ?? "";
     }
   } catch {
-    return tg.send(chatId, MSG.cvFailed);
+    return tg.send(chatId, MSG.cvFailed, [
+      [{ text: "⏩ Lewati CV & Pilih Peran Dulu", data: "cv:skip" }],
+    ]);
   }
   cvText = cvText.trim();
-  if (cvText.length < 80) return tg.send(chatId, m.document ? MSG.cvFailed : MSG.askCv);
+  if (cvText.length < 80) {
+    return tg.send(chatId, m.document ? MSG.cvFailed : MSG.cvNeedMore, [
+      [{ text: "⏩ Lewati CV & Pilih Peran Dulu", data: "cv:skip" }],
+    ]);
+  }
 
   const parsed = parseCv(cvText);
   // Pengguna lama yang memperbarui CV (/cv) sudah punya preferensi: jangan ulangi onboarding.
@@ -476,7 +484,23 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>, tg: M
   if (kind === "consent" && user.state === "consent") {
     await repos.giveConsent(user.id, CONSENT_VERSION);
     await tg.answerCallback(cb.id, "Terima kasih!");
-    return tg.send(chatId, MSG.askCv);
+    return tg.send(chatId, MSG.askCv, [
+      [{ text: "⏩ Lewati CV & Pilih Peran Dulu", data: "cv:skip" }],
+    ]);
+  }
+  if (kind === "cv" && a === "skip" && user.state === "cv") {
+    // Inisialisasi profil dasar tanpa skill/CV mentah agar user tetap bisa lanjut onboarding
+    await repos.saveProfile(user.id, {
+      skills: [],
+      education: "",
+      cvEnc: "",
+    });
+    await repos.setState(user.id, "role");
+    await tg.answerCallback(cb.id, "CV dilewati untuk sementara");
+    return tg.send(
+      chatId,
+      "👍 Siap! Kamu bisa mengunggah CV kapan saja nanti dengan perintah <code>/cv</code>.\n\n" + MSG.askRole
+    );
   }
   if (kind === "lvl" && user.state === "level") {
     const level = parseLevel(a ?? "");

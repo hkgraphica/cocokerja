@@ -58,11 +58,12 @@ Saya memantau lowongan dan mengirim yang cocok dengan profilmu, lengkap dengan a
 <b>Pemrosesan AI:</b> untuk penilaian dan saran, ringkasan profilmu (skill, pendidikan, preferensi) dikirim ke penyedia model AI pihak ketiga. Khusus fitur <i>Sesuaikan CV</i>, <b>teks CV-mu</b> juga dikirim ke penyedia tersebut saat kamu menekan tombolnya.
 
 Setuju melanjutkan?`,
-  askCv: "Kirim CV kamu sebagai <b>file PDF</b> (maks 5 MB) atau <b>tempel teksnya</b> di sini.",
-  cvFailed: "Saya tidak bisa membaca CV itu (mungkin hasil scan). Coba kirim PDF teks atau tempel isi CV langsung.",
-  askRole: "Peran apa yang kamu cari? Pisahkan dengan koma.\nContoh: <i>data analyst, business analyst</i>",
-  askLocation: "Lokasi kerja yang kamu mau? Contoh: <i>Jakarta</i>. Tulis <i>remote</i> jika mau remote.",
-  askLevel: "Level yang kamu cari?",
+  askCv: "📄 <b>Kirimkan CV Kamu</b>\n\nKirimkan file <b>PDF</b> (maks. 5 MB) atau <b>tempel/ketik teks ringkasan CV-mu</b> di sini.\n\n<i>Info yang dibutuhkan:</i> Pendidikan, jurusan, pengalaman/organisasi/proyek, dan skill utama kamu.\n\n💡 <i>Belum punya file PDF di HP?</i> Kamu bisa langsung ketik ringkasan skill atau pilih tombol di bawah:",
+  cvNeedMore: "👋 Halo! Saya perhatikan teks yang kamu kirimkan terlalu singkat untuk dianalisis sebagai CV.\n\nAgar CocoKerja bisa mencocokkan lowongan yang relevan dan menghitung skor skill kamu:\n\n1. 📎 <b>Kirim dokumen PDF CV-mu</b>, atau\n2. ✍️ <b>Ketik ringkasan CV</b> (minimal mencakup jurusan, keahlian/software yang dikuasai, atau pengalaman magang/organisasi).\n\n<i>Atau pilih opsi di bawah jika ingin langsung memilih peran dulu:</i>",
+  cvFailed: "⚠️ Saya tidak bisa membaca dokumen tersebut (kemungkinan hasil scan gambar/foto non-teks). Silakan kirim file PDF teks atau tempel isi teks CV langsung ke chat ini.",
+  askRole: "🎯 Peran apa yang kamu cari? Pisahkan dengan koma jika lebih dari satu.\nContoh: <code>staff keuangan, accounting officer</code>\natau: <code>data analyst, business development</code>",
+  askLocation: "📍 Lokasi kerja yang kamu inginkan? Contoh: <code>Jakarta</code> atau <code>Bandung</code>. Tulis <code>remote</code> jika ingin kerja dari rumah.",
+  askLevel: "Tingkat posisi yang kamu cari?",
   done: "✅ Profil siap! Saya akan mengirim lowongan yang cocok. Perintah: /status /profil /ubah /cv /ambang /bantuan",
   help: `<b>Perintah</b>
 /start - mulai atau lanjutkan pendaftaran
