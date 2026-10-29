@@ -31,7 +31,8 @@ export default function Home() {
           </a>
           <nav className="nav-actions">
             <a href="#cara-kerja" className="link-muted">Cara Kerja</a>
-            <a href="#fitur" className="link-muted">Fitur</a>
+            <a href="#komparasi" className="link-muted">Perbandingan</a>
+            <a href="#faq" className="link-muted">FAQ</a>
             <a
               href={BOT_URL}
               target="_blank"
@@ -49,7 +50,7 @@ export default function Home() {
         <section className="hero">
           <div className="status-badge">
             <span className="status-dot" />
-            <span>MVP Pilot Aktif • Khusus Fresh Graduate</span>
+            <span>Asisten Telegram Pribadi • Khusus Fresh Graduate</span>
           </div>
 
           <h1>
@@ -57,8 +58,8 @@ export default function Home() {
           </h1>
 
           <p className="lead">
-            Kirimkan CV kamu satu kali. CocoKerja mengekstrak skill dan pengalaman secara terstruktur,
-            lalu memantau lowongan kerja riil dan memberikan evaluasi kecocokan objektif beserta analisis kekurangannya.
+            Bukan portal pencari kerja konvensional di mana kamu harus scroll ratusan loker setiap hari.
+            Kirimkan CV kamu satu kali ke Telegram, CocoKerja memantau lowongan riil di latar belakang dan memberi tahu saat ada peluang yang benar-benar cocok.
           </p>
 
           <div className="hero-cta">
@@ -261,6 +262,107 @@ export default function Home() {
                 Kami tidak membombardirmu dengan 100 loker sampah. Kamu hanya menerima sedikit lowongan yang benar-benar bernilai tinggi dan relevan dengan kompetensimu.
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Comparison Section: CocoKerja vs Job Portal Konvensional */}
+        <section className="features-section" id="komparasi">
+          <div className="section-label">Perbedaan Mendasar</div>
+          <h2 className="section-title">Mengapa CocoKerja Berbeda dengan Job Portal Biasa?</h2>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", marginBottom: "20px" }}>
+            Kami merancang CocoKerja bukan untuk menahanmu berlama-lama di dalam aplikasi, melainkan membantu kamu mendapatkan pekerjaan pertama yang tepat seefisien mungkin.
+          </p>
+
+          <div className="comparison-table-wrapper">
+            <table className="comparison-table">
+              <thead>
+                <tr>
+                  <th>Fitur & Pendekatan</th>
+                  <th>Job Portal Konvensional</th>
+                  <th className="highlight-col">CocoKerja (@cocokerja_bot)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Cara Pakai</strong></td>
+                  <td>Harus buka web/app & scrolling ratusan loker</td>
+                  <td className="highlight-col"><strong>Pasif & Santai</strong>: Drop CV sekali, alert masuk ke Telegram</td>
+                </tr>
+                <tr>
+                  <td><strong>Kesesuaian Pengalaman</strong></td>
+                  <td>Sering tertipu judul entry-level tapi minta 3+ tahun</td>
+                  <td className="highlight-col"><span className="badge-tag yes">✓ Filter Ketat</span> Khusus Fresh Graduate & Magang</td>
+                </tr>
+                <tr>
+                  <td><strong>Transparansi Penilaian</strong></td>
+                  <td>Black-box tanpa alasan yang jelas</td>
+                  <td className="highlight-col"><span className="badge-tag yes">✓ Skor 0-100%</span> Rincian skill cocok vs skill gap</td>
+                </tr>
+                <tr>
+                  <td><strong>Pencegahan Penipuan</strong></td>
+                  <td>Rawan loker bodong (biaya tiket/travel)</td>
+                  <td className="highlight-col"><span className="badge-tag yes">✓ Anti-Scam</span> Flagging otomatis indikasi biaya/MLM</td>
+                </tr>
+                <tr>
+                  <td><strong>Tautan Kadaluarsa</strong></td>
+                  <td>Sering mendapati link 404 / lowongan tutup</td>
+                  <td className="highlight-col"><span className="badge-tag yes">✓ Real-time Probe</span> Batal kirim jika loker sudah 404</td>
+                </tr>
+                <tr>
+                  <td><strong>AI CV Tailoring</strong></td>
+                  <td>Rentan mengarang fakta/skill fiktif</td>
+                  <td className="highlight-col"><span className="badge-tag yes">✓ Anti-Halusinasi</span> Wajib verifikasi kutipan asli CV</td>
+                </tr>
+                <tr>
+                  <td><strong>Privasi Pengguna</strong></td>
+                  <td>Data profil disimpan & sering dibagikan</td>
+                  <td className="highlight-col"><span className="badge-tag yes">✓ Enkripsi AES-256</span> Hapus kapan saja via <code>/hapus</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="features-section" id="faq">
+          <div className="section-label">Tanya Jawab (FAQ)</div>
+          <h2 className="section-title">Pertanyaan yang Sering Diajukan</h2>
+
+          <div className="faq-list">
+            <details className="faq-item" open>
+              <summary className="faq-summary">Apakah layanan CocoKerja gratis?</summary>
+              <div className="faq-content">
+                Ya! Setiap pengguna fresh graduate mendapatkan kuota gratis 3 job alert terkurasi per minggu, akses konsultasi AI Copilot, dan fitur on-demand job check tanpa dipungut biaya pendaftaran apapun.
+              </div>
+            </details>
+
+            <details className="faq-item">
+              <summary className="faq-summary">Apakah saya harus menginstal aplikasi baru?</summary>
+              <div className="faq-content">
+                Tidak perlu. Seluruh interaksi, upload CV, penerimaan alert, dan konsultasi karier dilakukan langsung di dalam aplikasi Telegram melalui bot resmi <b>@cocokerja_bot</b>.
+              </div>
+            </details>
+
+            <details className="faq-item">
+              <summary className="faq-summary">Kapan waktu pengiriman notifikasi lowongan?</summary>
+              <div className="faq-content">
+                CocoKerja secara otomatis memindai lowongan dan mengirimkan kurasi terbaik setiap hari kerja pada pukul <b>08:00 WIB</b> jika ada lowongan yang mencapai ambang kecocokan dengan profilmu. Selain itu, kamu juga bisa mengecek link loker secara instan kapan saja.
+              </div>
+            </details>
+
+            <details className="faq-item">
+              <summary className="faq-summary">Format CV apa yang didukung?</summary>
+              <div className="faq-content">
+                Kamu bisa langsung mengirimkan file dokumen <b>PDF</b> (maksimal 5 MB) atau mengetikkan ringkasan pengalaman dan skill langsung sebagai pesan teks ke dalam chat bot.
+              </div>
+            </details>
+
+            <details className="faq-item">
+              <summary className="faq-summary">Bagaimana cara menghapus data saya jika sudah dapat kerja?</summary>
+              <div className="faq-content">
+                Kami sangat menghargai privasi dan mematuhi regulasi perlindungan data pribadi (UU PDP). Cukup ketik perintah <code>/hapus</code> di Telegram, dan seluruh data profil serta teks CV kamu akan langsung dimusnahkan secara permanen dari database kami.
+              </div>
+            </details>
           </div>
         </section>
 

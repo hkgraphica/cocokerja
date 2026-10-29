@@ -772,6 +772,128 @@ body {
   }
 }
 
+/* Comparison Section */
+.comparison-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  margin-top: 24px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.comparison-table th {
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.comparison-table tr:last-child td {
+  border-bottom: none;
+}
+
+.comparison-table .highlight-col {
+  background: rgba(37, 99, 235, 0.06);
+  border-left: 1px solid rgba(59, 130, 246, 0.2);
+  border-right: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.comparison-table th.highlight-col {
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--accent-light);
+}
+
+.badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-tag.yes {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge-tag.no {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* FAQ Section */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.faq-item[open] {
+  border-color: var(--border-focus);
+}
+
+.faq-summary {
+  padding: 16px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.faq-summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-summary::after {
+  content: "+";
+  font-size: 1.25rem;
+  color: var(--accent-light);
+  transition: transform 0.2s ease;
+}
+
+.faq-item[open] .faq-summary::after {
+  content: "−";
+}
+
+.faq-content {
+  padding: 0 20px 18px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+}
+
 @media (min-width: 769px) and (max-width: 1024px) {
   .hero h1 {
     font-size: 2.5rem;
