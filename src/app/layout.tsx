@@ -107,18 +107,59 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "WebApplication",
-              name: "CocoKerja",
-              url: "https://cocokerja.vercel.app",
-              applicationCategory: "BusinessApplication",
-              operatingSystem: "Telegram, Web, Android, iOS",
-              offers: {
-                "@type": "Offer",
-                price: "0",
-                priceCurrency: "IDR",
-              },
-              description:
-                "Asisten karier AI & job alert Telegram untuk fresh graduate Indonesia dengan scoring relevansi transparan dan deteksi scam.",
+              "@graph": [
+                {
+                  "@type": "WebApplication",
+                  name: "CocoKerja",
+                  url: "https://cocokerja.vercel.app",
+                  applicationCategory: "BusinessApplication",
+                  operatingSystem: "Telegram, Web, Android, iOS",
+                  offers: {
+                    "@type": "Offer",
+                    price: "0",
+                    priceCurrency: "IDR",
+                  },
+                  description:
+                    "Asisten karier AI & job alert Telegram untuk fresh graduate Indonesia dengan scoring relevansi transparan dan deteksi scam.",
+                },
+                {
+                  "@type": "FAQPage",
+                  mainEntity: [
+                    {
+                      "@type": "Question",
+                      name: "Apakah layanan CocoKerja gratis?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Ya! Setiap pengguna fresh graduate mendapatkan kuota gratis 3 job alert terkurasi per minggu, akses konsultasi AI Copilot, dan fitur on-demand job check tanpa dipungut biaya pendaftaran apapun.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "Apakah saya harus menginstal aplikasi baru?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Tidak perlu. Seluruh interaksi, upload CV, penerimaan alert, dan konsultasi karier dilakukan langsung di dalam aplikasi Telegram melalui bot resmi @cocokerja_bot.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "Kapan waktu pengiriman notifikasi lowongan?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "CocoKerja secara otomatis memindai lowongan dan mengirimkan kurasi terbaik setiap hari kerja pada pukul 08:00 WIB jika ada lowongan yang mencapai ambang kecocokan dengan profilmu.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "Bagaimana cara menghapus data saya jika sudah dapat kerja?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Cukup ketik perintah /hapus di Telegram, dan seluruh data profil serta teks CV kamu akan langsung dimusnahkan secara permanen dari database kami sesuai regulasi UU PDP.",
+                      },
+                    },
+                  ],
+                },
+              ],
             }),
           }}
         />
