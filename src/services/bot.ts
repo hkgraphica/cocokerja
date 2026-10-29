@@ -188,8 +188,19 @@ async function handleMessage(m: Message, tg: Messenger) {
     case "cv":
       return handleCv(m, user.id, chatId, tg);
     case "role": {
+      // Deteksi input pendidikan yang salah masuk ke field peran
+      const looksLikeEducation = /^(pendidikan|education|s1|s2|d3|d4|sarjana|bachelor|master|universitas|jurusan|prodi)/i.test(text);
       const roles = parseRoles(text);
-      if (!roles.length) return tg.send(chatId, MSG.askRole);
+      if (!roles.length || looksLikeEducation) {
+        const hint = looksLikeEducation
+          ? "Sepertinya kamu memasukkan pendidikan — yang ini sudah tercatat dari CV-mu 😊\n\n"
+          : "";
+        return tg.send(chatId,
+          hint + "Tuliskan <b>peran kerja</b> yang kamu cari. Pisahkan dengan koma jika lebih dari satu.\n"
+          + "Contoh: <code>staff keuangan, accounting officer</code>\n"
+          + "atau: <code>marketing, social media specialist</code>"
+        );
+      }
       await repos.patchPreferences(user.id, { roles });
       await repos.setState(user.id, "location");
       return tg.send(chatId, MSG.askLocation);
@@ -256,6 +267,56 @@ const askLevel = (chatId: string, tg: Messenger) =>
     { text: "Magang", data: "lvl:magang" },
     { text: "Semua level", data: "lvl:any" },
   ]]);
+
+/**
+ * Pipeline matching & notifikasi ringan untuk satu pengguna baru yang baru selesai onboarding.
+ * Dijalankan di background tanpa menghambat respons bot. Gagal diam-diam agar tidak mengganggu UX.
+ */
+async function triggerInstantMatch(userId: string, threshold: number, chatId: string, tg: Messenger) {
+  const [profile, user] = await Promise.all([repos.getProfile(userId), repos.upsertUser("telegram", chatId)]);
+  if (!profile) return;
+
+  const prefs = profile.preferences as import("@/core/types").Preferences;
+  const data = { skills: profile.skills, education: profile.education, preferences: prefs };
+  const candidates = await repos.candidateJobs(userId, prefs.roles ?? []);
+  if (!candidates.length) return;
+
+  const scored = candidates
+    .map((job) => ({ job, r: heuristicScore(data, job) as import("@/core/types").ScoreResult }))
+    .filter(({ r }) => r.score >= threshold)
+    .sort((a, b) => b.r.score - a.r.score)
+    .slice(0, 3); // Maksimal 3 alert instan saat onboarding baru
+
+  if (!scored.length) return;
+
+  await tg.send(chatId, `🎯 <b>Saya sudah menemukan ${scored.length} lowongan yang cocok untukmu!</b>`);
+
+  const { PLANS } = await import("@/core/plans");
+  const plan = PLANS[user.tier as import("@/core/types").Tier];
+  const usage = await repos.getUsage(userId);
+  const alertQuota = plan.alertsPerWeek - usage.alertsUsed;
+  const toSend = scored.slice(0, Math.min(alertQuota, scored.length));
+
+  for (const { job, r } of toSend) {
+    const matchId = await repos.upsertMatch({
+      userId,
+      jobId: job.id,
+      score: r.score,
+      scoreComponents: r.components,
+      reasons: r.reasons,
+      gaps: r.gaps,
+      scoredBy: "heuristic",
+      sentAt: new Date(),
+    });
+    const { jobCard: jc } = await import("@/core/messages");
+    await tg.send(chatId, jc(job, r, job.suspicious), feedbackButtons(matchId, job.url));
+    await repos.track("alert_sent", userId, { score: r.score, by: "heuristic", trigger: "onboarding" });
+    await repos.addUsage(userId, { alerts: 1 });
+    await new Promise((res) => setTimeout(res, 1100));
+  }
+}
+
+
 
 async function startOnboarding(chatId: string, userId: string, tg: Messenger) {
   await repos.setState(userId, "consent");
@@ -392,7 +453,12 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>, tg: M
     await repos.setState(user.id, "active");
     await repos.track("onboarding_done", user.id);
     await tg.answerCallback(cb.id);
-    return tg.send(chatId, MSG.done);
+    await tg.send(chatId, MSG.done);
+    // Trigger matching instan: jalankan pipeline ringan hanya untuk user ini di background
+    triggerInstantMatch(user.id, user.threshold, chatId, tg).catch((e) =>
+      console.error("instant_match_gagal", e instanceof Error ? e.message : e)
+    );
+    return;
   }
 
   const matchId = kind === "fb" ? b : a;

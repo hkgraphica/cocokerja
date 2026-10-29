@@ -2,10 +2,18 @@ import type { Level } from "./types";
 
 /** Parser input profil (dipakai onboarding dan /ubah). Murni, tanpa I/O. */
 
-/** "data analyst, BI analyst" → ["data analyst","bi analyst"] (maks 5, huruf kecil, unik). */
+/** "data analyst, BI analyst" → ["data analyst","bi analyst"] (maks 5, huruf kecil, unik).
+ *  Filter otomatis kata kunci yang bukan peran kerja (misal prefix "pendidikan:", "s1", dll).
+ */
 export function parseRoles(text: string): string[] {
-  const roles = text.split(",").map((r) => r.trim().toLowerCase().slice(0, 60)).filter(Boolean);
-  return [...new Set(roles)].slice(0, 5);
+  const JUNK_RE = /^(pendidikan|education|s1|s2|d3|d4|sarjana|jurusan|prodi|fakultas|universitas|bachelor|master)[\s:,-]*/i;
+  const raw = text
+    .replace(JUNK_RE, "")            // buang prefix pendidikan di awal
+    .replace(/\bpendidikan.*?[,\n]/gi, ",")  // buang segmen pendidikan di tengah
+    .split(",")
+    .map((r) => r.trim().toLowerCase().replace(/^[^a-z]+/, "").slice(0, 60))
+    .filter((r) => r.length >= 1 && !/^\d{4}$/.test(r)); // buang kosong dan tahun murni (e.g "2022")
+  return [...new Set(raw)].slice(0, 5);
 }
 
 /** "Jakarta, Bandung remote" → { location: "jakarta, bandung", remote: true }. Koma dipertahankan sebagai pemisah kota. */
