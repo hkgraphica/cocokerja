@@ -38,20 +38,21 @@
 
 | | Fitur | Keterangan |
 |---|---|---|
-| 🎯 | **Job Alert terkurasi** | Lowongan dicocokkan dengan profil, dikirim hanya bila skornya melewati ambangmu. |
-| 🧮 | **Skor transparan** | Skor heuristik berbobot yang bisa diaudit, diperhalus LLM hanya untuk kandidat teratas. |
-| 🛡️ | **Anti-scam** | Setiap lowongan dicek indikasi penipuan (biaya pendaftaran, deposit, MLM). |
-| ✂️ | **Tailor CV** | Menyusun ringkasan CV per lowongan. Semua klaim diverifikasi terhadap CV asli. |
-| 🔎 | **Cek lowongan instan** | Tempel teks/tautan lowongan, langsung dapat analisis kecocokan. Data terstruktur (JSON-LD) dibaca bila ada; halaman login diminta ditempel teksnya. |
-| 💬 | **Copilot karier** | Konsultasi karier lewat chat bebas (dibatasi kuota mingguan). |
+| 🎯 | **Job Alert terkurasi** | Lowongan dicocokkan dengan profil, dikirim otomatis setiap pagi (08:00 WIB) jika skor melewati ambangmu. |
+| 🧮 | **Skor transparan** | Skor heuristik 5-faktor berbobot yang bisa diaudit, diperhalus LLM hanya untuk kandidat teratas. |
+| 🛡️ | **Anti-scam** | Setiap lowongan dicek indikasi penipuan (biaya pendaftaran, travel, deposit, MLM). |
+| ✂️ | **Tailor CV** | Menyusun ringkasan CV per lowongan dengan verifikasi bukti kutipan wajib (*Zero Hallucination*). |
+| 🔎 | **Cek lowongan instan** | Tempel teks/tautan lowongan (LinkedIn/JobStreet/dll), langsung dapat analisis kecocokan secara real-time. |
+| 💬 | **Copilot karier** | Konsultasi karier via chat bebas dengan multi-model cascade (Nexotao & Gemini fallback). |
+| 📡 | **Multi-Source Ingestion** | Menghimpun loker dari ATS resmi (Greenhouse, Lever, Ashby), Remotive, dan Channel Telegram komunitas. |
 | 🧩 | **Skill gap & tracker** | Lihat kekurangan skill per lowongan dan simpan ke tracker lamaran. |
-| 🔒 | **Privasi** | CV terenkripsi AES-256-GCM; hapus seluruh data kapan saja dengan `/hapus ya`. |
+| 🔒 | **Privasi (UU PDP)** | CV terenkripsi AES-256-GCM; hapus seluruh data secara permanen kapan saja dengan `/hapus ya`. |
 
 ## Prinsip Produk
 
 1. **Signal over Volume**: kirim sedikit lowongan, tapi bernilai tinggi dan relevan.
 2. **Anti-Hallucination**: Tailor CV dilarang keras mengarang fakta atau skill yang tidak ada di CV. Setiap sorotan wajib punya bukti kutipan (`verifyTailor` di `core/tailor.ts`).
-3. **Zero Illegal Scraping**: hanya ATS publik resmi (Greenhouse, Lever, Ashby), RSS resmi, dan cek lowongan on-demand oleh pengguna.
+3. **Zero Illegal Scraping**: hanya ATS publik resmi perusahaan, RSS resmi, dan scraping web publik channel komunitas tanpa membebani server target.
 4. **Anti-Scam First**: lowongan mencurigakan ditandai sebelum sampai ke pengguna.
 
 ## Cara Kerja
@@ -154,12 +155,14 @@ Salin [`.env.example`](./.env.example) menjadi `.env`. Variabel utama:
 | `TELEGRAM_BOT_TOKEN` | ✅ | Token dari @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | ✅ | Acak ≥ 16 karakter: `openssl rand -hex 24` |
 | `CRON_SECRET` | ✅ | Bearer secret untuk `/api/cron/tick` (≥ 16 karakter) |
-| `ENCRYPTION_KEY` | ✅ | `openssl rand -base64 32` |
+| `ENCRYPTION_KEY` | ✅ | Kunci simetris AES-256 (`openssl rand -base64 32`) |
 | `JOB_SOURCES` | – | `greenhouse:slug,lever:slug,ashby:slug,remotive` |
 | `JOB_FEEDS` | – | URL RSS dipisah koma (hanya sumber yang mengizinkan) |
+| `TELEGRAM_CHANNELS` | – | Channel publik Telegram dipisah koma (mis. `lokerblog,lokernastelegram`) |
 | `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | – | LLM kompatibel OpenAI. Kosongkan untuk skor heuristik saja |
-| `GEMINI_API_KEY` / `GEMINI_MODEL` | – | LLM cadangan |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | – | LLM cadangan (Google Gemini) jika model utama gagal |
 | `TICK_BUDGET_MS` | – | Batas waktu satu tick (default 45000; Vercel Hobby ≤ 45000) |
+| `NEXT_PUBLIC_BOT_URL` | – | Tautan bot Telegram untuk tombol landing page |
 | `TICK_INTERVAL_MS`, `DB_POOL_MAX` | – | Khusus worker VPS |
 
 > [!WARNING]
@@ -202,15 +205,33 @@ Salin [`.env.example`](./.env.example) menjadi `.env`. Variabel utama:
 
 ## Roadmap
 
-- [x] Onboarding, parsing CV, dan job alert terjadwal
-- [x] Skor heuristik + penyempurnaan LLM, deteksi scam
+- [x] Onboarding interaktif ramah, parsing CV, dan job alert terjadwal (08:00 WIB)
+- [x] Skor heuristik 5-faktor + penyempurnaan LLM (Nexotao & Gemini multi-model cascade)
+- [x] Deteksi scam otomatis & validasi tautan aktif (*zero 404 broken links*)
 - [x] Cek lowongan on-demand, skill gap, tracker sederhana
-- [x] Tailor CV dengan verifikasi anti-halusinasi
+- [x] Tailor CV dengan verifikasi anti-halusinasi berbasis bukti kutipan asli
+- [x] Ingestion multi-sumber: ATS (Greenhouse, Lever, Ashby), Remotive, dan Channel Telegram komunitas
 - [x] Pencarian cepat (trigram) & conditional GET untuk RSS
-- [x] Skoring lebih akurat (level, lokasi, pengalaman) & pembaruan profil (`/ubah`, `/cv`)
-- [ ] Simulasi interview
+- [x] Skoring lebih akurat & pembaruan preferensi (`/ubah`, `/cv`, `/profil`)
+- [ ] Simulasi interview teknis AI
 - [ ] Tracker status lamaran penuh
 - [ ] Pembayaran & paket Premium
-- [ ] Kanal WhatsApp
+- [ ] Kanal WhatsApp Bot
 
-Tabel `jobs_queue` dan `subscriptions` sudah disiapkan di skema untuk fase berikutnya.
+## Berkontribusi
+
+Kontribusi dari komunitas sangat terbuka! Anda dapat membantu dengan:
+- Mendaftarkan channel publik Telegram kurasi loker baru di `TELEGRAM_CHANNELS`.
+- Menambahkan slug ATS resmi perusahaan di Indonesia ke `JOB_SOURCES`.
+- Memperluas sinonim role dan pemetaan skill di `src/core/skills.ts` dan `src/core/scoring.ts`.
+
+Silakan buat *Issue* atau ajukan *Pull Request* dengan memastikan seluruh pengujian lulus:
+```bash
+npm test
+npm run typecheck
+```
+
+## Lisensi
+
+Didistribusikan di bawah lisensi MIT. Silakan gunakan secara bijak untuk membantu para pencari kerja dan fresh graduate di Indonesia.
+
