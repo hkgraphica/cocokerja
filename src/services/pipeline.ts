@@ -158,6 +158,15 @@ export async function sendAlerts(messenger: Messenger, deadline: number) {
         await repos.markSent(match.id); // per pesan: bila proses mati di tengah, tidak terkirim ganda
         await repos.track("alert_sent", user.id, { score: match.score, by: match.scoredBy });
         delivered++;
+        // Peringatan kuota hampir habis
+        const alertsRemaining = plan.alertsPerWeek - usage.alertsUsed - delivered;
+        if (alertsRemaining === 1 && user.tier === "free") {
+          const { MSG } = await import("@/core/messages");
+          const resetDay = "Senin depan";
+          await sleep(600);
+          // quotaWarning diperluas via Object.assign di messages.ts; cast ke any untuk memanggil 2-arg versi.
+          await messenger.send(user.channelId, (MSG as any).quotaWarning(1, resetDay));
+        }
         await sleep(1100); // ±1 pesan/detik per chat
       } catch (e) {
         if (isBlockedError(e)) {
@@ -172,4 +181,71 @@ export async function sendAlerts(messenger: Messenger, deadline: number) {
   });
 
   return results.reduce((n, r) => n + (r.status === "fulfilled" ? r.value : 0), 0);
+}
+
+/**
+ * 4) Re-engagement: kirim pesan motivasi ke user aktif yang >7 hari tidak menerima alert.
+ *    Berjalan maksimal sekali seminggu per user (dicek via events).
+ */
+export async function sendReEngagement(messenger: Messenger, deadline: number) {
+  const { MSG, getWeeklyTip } = await import("@/core/messages");
+  const { isoWeek } = await import("@/core/plans");
+  const week = isoWeek();
+  const passives = await repos.passiveUsers(7);
+  let sent = 0;
+  for (const { user } of passives) {
+    if (Date.now() > deadline) break;
+    try {
+      // Satu kali per minggu
+      if (await repos.hasReceivedDigestThisWeek(user.id, week + "-reengage")) continue;
+      const tip = getWeeklyTip(new Date().getDay());
+      await messenger.send(user.channelId, (MSG as any).reEngagement(tip));
+      await repos.track("re_engagement_sent", user.id, { week });
+      // Simpan di events agar tidak dikirim ulang minggu ini
+      await repos.track("weekly_digest", user.id, { week: week + "-reengage" });
+      sent++;
+      await sleep(1100);
+    } catch (e) {
+      if (isBlockedError(e)) {
+        await repos.markInactive(user.channel, user.channelId);
+      }
+    }
+  }
+  return sent;
+}
+
+/**
+ * 5) Weekly digest: ringkasan mingguan (dikirim setiap Senin).
+ *    Hanya dikirim jika hari ini Senin (day === 1) dan user belum terima digest minggu ini.
+ */
+export async function sendWeeklyDigest(messenger: Messenger, totalJobsThisWeek: number, deadline: number) {
+  // Hanya jalankan di hari Senin (UTC+7: offset +7 jam)
+  const nowWib = new Date(Date.now() + 7 * 3600000);
+  if (nowWib.getUTCDay() !== 1) return 0; // 0=Minggu, 1=Senin
+
+  const { MSG, getWeeklyTip } = await import("@/core/messages");
+  const { isoWeek } = await import("@/core/plans");
+  const week = isoWeek();
+  const topSkills = await repos.topSkillsThisWeek(6);
+  const allUsers = await repos.activeUsers();
+  let sent = 0;
+
+  for (const { user } of allUsers) {
+    if (Date.now() > deadline) break;
+    try {
+      if (await repos.hasReceivedDigestThisWeek(user.id, week)) continue;
+      const usage = await repos.getUsage(user.id);
+      const tip = getWeeklyTip(Number(week.split("-W")[1]) ?? 0);
+      const msg = (MSG as any).weeklyDigest(usage.alertsUsed, totalJobsThisWeek, topSkills, tip);
+      await messenger.send(user.channelId, msg);
+      await repos.track("weekly_digest", user.id, { week, alertsSent: usage.alertsUsed });
+      sent++;
+      await sleep(1100);
+    } catch (e) {
+      if (isBlockedError(e)) {
+        await repos.markInactive(user.channel, user.channelId);
+      }
+    }
+  }
+  return sent;
 }

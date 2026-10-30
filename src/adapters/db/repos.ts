@@ -279,4 +279,77 @@ export const repos = {
     const r = await db().select({ n: sql<number>`count(*)` }).from(users).where(inArray(users.id, ids));
     return Number(r[0].n);
   },
+
+  /** User aktif yang belum menerima alert lebih dari N hari. Dipakai untuk re-engagement. */
+  async passiveUsers(daysSinceSent = 7) {
+    const cutoff = new Date(Date.now() - daysSinceSent * 86400000);
+    return db()
+      .select({ user: users })
+      .from(users)
+      .innerJoin(profiles, eq(profiles.userId, users.id))
+      .where(
+        and(
+          eq(users.state, "active"),
+          eq(users.isActive, true),
+          notExists(
+            db()
+              .select({ one: sql`1` })
+              .from(matches)
+              .where(
+                and(
+                  eq(matches.userId, users.id),
+                  gte(matches.sentAt, cutoff),
+                ),
+              ),
+          ),
+        ),
+      )
+      .limit(200);
+  },
+
+  /** Ambil top N skill yang paling sering muncul di deskripsi lowongan aktif 7 hari terakhir. */
+  async topSkillsThisWeek(limit = 8): Promise<string[]> {
+    const since = new Date(Date.now() - 7 * 86400000);
+    const rows = await db()
+      .select({ description: jobs.description })
+      .from(jobs)
+      .where(and(eq(jobs.status, "active"), gte(jobs.fetchedAt, since)))
+      .limit(500);
+
+    const freq = new Map<string, number>();
+    const SKILL_KEYWORDS = [
+      "excel","sql","python","javascript","typescript","figma","canva","power bi","tableau",
+      "google analytics","seo","copywriting","photoshop","illustrator","ms office","word",
+      "powerpoint","r studio","java","php","laravel","react","vue","node","git","linux",
+      "accounting","akuntansi","pajak","audit","keuangan","manajemen","pemasaran","marketing",
+      "komunikasi","presentasi","leadership","teamwork","crm","erp","sap","myob","zahir",
+      "customer service","cold calling","canvassing","sosial media","content creator",
+    ];
+    for (const row of rows) {
+      const desc = row.description.toLowerCase();
+      for (const kw of SKILL_KEYWORDS) {
+        if (desc.includes(kw)) freq.set(kw, (freq.get(kw) ?? 0) + 1);
+      }
+    }
+    return [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([kw]) => kw);
+  },
+
+  /** Tandai bahwa digest mingguan sudah dikirim ke user (simpan di events dengan type 'weekly_digest'). */
+  async hasReceivedDigestThisWeek(userId: string, week: string): Promise<boolean> {
+    const rows = await db()
+      .select({ id: events.id })
+      .from(events)
+      .where(
+        and(
+          eq(events.userId, userId),
+          eq(events.type, "weekly_digest"),
+          sql`${events.meta}->>'week' = ${week}`,
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  },
 };

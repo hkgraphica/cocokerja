@@ -19,6 +19,7 @@ const MAX_PDF = 5 * 1024 * 1024;
 /** Tombol aksi di bawah kartu lowongan. Tombol Lamar hanya ada bila lowongan punya URL asli. */
 export const feedbackButtons = (matchId: string, url?: string) => [
   ...(url ? [[{ text: "🔗 Lamar", url }]] : []),
+  [{ text: "📝 Tips Interview", data: `itvw:${matchId}` }],
   [
     { text: "📊 Skill gap", data: `gap:${matchId}` },
     { text: "💾 Simpan", data: `track:${matchId}` },
@@ -346,6 +347,12 @@ async function triggerInstantMatch(userId: string, threshold: number, chatId: st
     await repos.addUsage(userId, { alerts: 1 });
     await new Promise((res) => setTimeout(res, 1100));
   }
+
+  // Kirim milestone message jika mencapai jumlah tertentu
+  const totalSent = (await repos.getUsage(userId)).alertsUsed;
+  const { MSG: M } = await import("@/core/messages");
+  const milestone = M.milestoneMessage(totalSent);
+  if (milestone) await tg.send(chatId, milestone);
 }
 
 
@@ -509,7 +516,7 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>, tg: M
     await repos.setState(user.id, "active");
     await repos.track("onboarding_done", user.id);
     await tg.answerCallback(cb.id);
-    await tg.send(chatId, MSG.done);
+    await tg.send(chatId, MSG.welcomeActive);
     // Trigger matching instan: jalankan pipeline ringan hanya untuk user ini di background
     triggerInstantMatch(user.id, user.threshold, chatId, tg).catch((e) =>
       console.error("instant_match_gagal", e instanceof Error ? e.message : e)
@@ -536,6 +543,11 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>, tg: M
     return tg.send(chatId, `<b>Skill gap — ${escapeHtml(row.job.title)}</b>\nKecocokan ${row.match.score}%\n${gaps}`);
   }
   if (kind === "tlr") return handleTailor(cb.id, row, user, chatId, tg);
+  if (kind === "itvw") {
+    await tg.answerCallback(cb.id);
+    const { MSG: M } = await import("@/core/messages");
+    return tg.send(chatId, M.interviewTip(row.job.title));
+  }
   return tg.answerCallback(cb.id);
 }
 

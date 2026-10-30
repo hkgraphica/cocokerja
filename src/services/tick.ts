@@ -3,7 +3,7 @@ import { configuredSources } from "@/adapters/sources";
 import { OpenAiCompatScorer } from "@/adapters/llm";
 import { TelegramMessenger } from "@/adapters/telegram";
 import { env } from "@/config/env";
-import { ingest, runMatching, sendAlerts } from "./pipeline";
+import { ingest, runMatching, sendAlerts, sendWeeklyDigest, sendReEngagement } from "./pipeline";
 import type { FetchCache } from "@/ports";
 
 const feedCache: FetchCache = {
@@ -23,8 +23,11 @@ export async function tick() {
   const ingestStats = await ingest(configuredSources(feedCache));
   const llm = env().LLM_API_KEY ? new OpenAiCompatScorer() : null;
   const matched = await runMatching(llm, deadline);
-  const sent = await sendAlerts(new TelegramMessenger(), deadline);
+  const tg = new TelegramMessenger();
+  const sent = await sendAlerts(tg, deadline);
+  const digest = Date.now() < deadline ? await sendWeeklyDigest(tg, ingestStats.fetched, deadline).catch(() => 0) : 0;
+  const reEngaged = Date.now() < deadline ? await sendReEngagement(tg, deadline).catch(() => 0) : 0;
   // Housekeeping best-effort: tidak boleh menggagalkan tick maupun melampaui anggaran waktu.
   if (Date.now() < deadline) await repos.purgeStale().catch((e) => console.error("purge gagal", e instanceof Error ? e.message : e));
-  return { ingest: ingestStats, matched, sent, ms: Date.now() - started };
+  return { ingest: ingestStats, matched, sent, digest, reEngaged, ms: Date.now() - started };
 }
